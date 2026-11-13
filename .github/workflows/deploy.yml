@@ -1,0 +1,92 @@
+name: Verificar e publicar (GitHub Pages)
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Lint, tipos, testes e build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Auditoria de dependências de produção
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Formatação (Prettier)
+        run: npm run format:check
+
+      - name: Verificação de tipos
+        run: npm run typecheck
+
+      - name: Testes
+        run: npm test
+
+      - name: Garantir que a chave do Supabase é pública (anon/publishable)
+        # Falha o pipeline se alguém colocar uma chave privada no secret.
+        # A chave anon é pública por design; a proteção real é o RLS.
+        run: |
+          node -e '
+            const key = process.env.VITE_SUPABASE_ANON_KEY || "";
+            if (!key) { console.log("Secret ausente: build usará o modo sem Supabase (demonstração)."); process.exit(0); }
+            if (key.startsWith("sb_secret_")) { console.error("Chave secreta detectada."); process.exit(1); }
+            const parts = key.split(".");
+            if (parts.length === 3) {
+              try {
+                const role = JSON.parse(Buffer.from(parts[1], "base64url").toString()).role;
+                if (role === "service_role") { console.error("Chave service_role detectada."); process.exit(1); }
+              } catch { /* não é JWT legível: segue */ }
+            }
+          '
+        env:
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+
+      - name: Build
+        run: npm run build
+        env:
+          # Apenas valores PÚBLICOS (URL do projeto e chave anon/publishable).
+          # Nunca use service_role, senha de banco ou segredo JWT aqui.
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+
+      - uses: actions/upload-pages-artifact@v3
+        if: github.event_name != 'pull_request'
+        with:
+          path: dist
+
+  deploy:
+    name: Publicar no GitHub Pages
+    needs: verify
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
