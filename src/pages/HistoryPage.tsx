@@ -272,7 +272,7 @@ to={`/historico/comparar?a=${selected[0] ?? ''}&b=${selected[1] ?? ''}`}
 
 aria-disabled={selected.length !== 2}
 
-onClick​={(event) => {
+onClick={(event) => {
 
 if (selected.length !== 2) event.preventDefault()
 
@@ -292,7 +292,7 @@ Comparar 2 simulações ({selected.length}/2)
 
 Excluir TODO o histórico?
 
-<button type="button" className="qc-btn-danger" onClick​={() => void removeAll()}>
+<button type="button" className="qc-btn-danger" onClick={() => void removeAll()}>
 
 Sim, excluir tudo
 
@@ -304,7 +304,7 @@ type="button"
 
 className="qc-btn-secondary"
 
-onClick​={() => setConfirmAll(false)}
+onClick={() => setConfirmAll(false)}
 
 >
 
@@ -316,7 +316,7 @@ Cancelar
 
 ) : (
 
-<button type="button" className="qc-btn-danger" onClick​={() => setConfirmAll(true)}>
+<button type="button" className="qc-btn-danger" onClick={() => setConfirmAll(true)}>
 
 Excluir todo o histórico
 
@@ -350,7 +350,7 @@ className="no-print mt-1 size-5"
 
 checked={selected.includes(item.id)}
 
-onChange​={() => toggle(item.id)}
+onChange={() => toggle(item.id)}
 
 aria-label={`Selecionar “${item.title}” para comparação`}
 
@@ -392,7 +392,7 @@ className="qc-btn-secondary"
 
 disabled={busyId === item.id}
 
-onClick​={() => void duplicate(item.id)}
+onClick={() => void duplicate(item.id)}
 
 >
 
@@ -408,7 +408,7 @@ className="qc-btn-danger"
 
 disabled={busyId === item.id}
 
-onClick​={() => void remove(item.id, item.title)}
+onClick={() => void remove(item.id, item.title)}
 
 >
 

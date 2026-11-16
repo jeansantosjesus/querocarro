@@ -1,4 +1,4 @@
-port { ASSUMPTIONS_REFERENCE_MONTH, DEFAULT_ASSUMPTIONS } from './assumptions'
+import { ASSUMPTIONS_REFERENCE_MONTH, DEFAULT_ASSUMPTIONS } from './assumptions'
 import { CLUSTERING, ADHERENCE_THRESHOLDS, PRESSURE_THRESHOLDS } from './analytics'
 import { COMFORT_BANDS, FINANCIAL_SCORE_WEIGHTS } from './capacity'
 import { DISCLAIMERS } from './copy'

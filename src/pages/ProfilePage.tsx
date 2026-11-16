@@ -242,7 +242,7 @@ checked={consent === true}
 
 disabled={consent === null}
 
-onChange​={(event) => void changeConsent(event.target.checked)}
+onChange={(event) => void changeConsent(event.target.checked)}
 
 />
 
@@ -256,7 +256,7 @@ conta. Você pode desativar a qualquer momento.
 
 </label>
 
-<button type="button" className="qc-btn-danger mt-4" onClick​={() => void deleteHistory()}>
+<button type="button" className="qc-btn-danger mt-4" onClick={() => void deleteHistory()}>
 
 Excluir todo o meu histórico
 
@@ -300,7 +300,7 @@ value={confirmText}
 
 autoComplete="off"
 
-onChange​={(event) => setConfirmText(event.target.value)}
+onChange={(event) => setConfirmText(event.target.value)}
 
 />
 
@@ -314,7 +314,7 @@ className="qc-btn-danger mt-4"
 
 disabled={confirmText !== CONFIRM_WORD || busy}
 
-onClick​={() => void deleteAccount()}
+onClick={() => void deleteAccount()}
 
 >
 

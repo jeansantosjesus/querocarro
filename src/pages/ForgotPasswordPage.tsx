@@ -122,7 +122,7 @@ resultado.
 
 </p>
 
-<button type="button" className="qc-btn-primary mt-4" onClick​={startFresh}>
+<button type="button" className="qc-btn-primary mt-4" onClick={startFresh}>
 
 {isDemo && !user ? 'Começar com dados fictícios' : 'Começar'}
 

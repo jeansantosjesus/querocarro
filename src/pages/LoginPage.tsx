@@ -130,7 +130,7 @@ return (
 
 
 
-<form onSubmit​={handleSubmit(onSubmit)} noValidate className="qc-card space-y-5 p-6">
+<form onSubmit={handleSubmit(onSubmit)} noValidate className="qc-card space-y-5 p-6">
 
 {formError ? <Alert tone="bad">{formError}</Alert> : null}
 
@@ -254,7 +254,7 @@ desligá-las no resultado).
 
 </p>
 
-<button type="button" className="qc-btn-secondary mt-4" onClick​={handleDemo}>
+<button type="button" className="qc-btn-secondary mt-4" onClick={handleDemo}>
 
 Experimentar a demonstração
 

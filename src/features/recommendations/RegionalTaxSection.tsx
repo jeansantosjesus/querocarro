@@ -78,7 +78,7 @@ aria-expanded={open}
 
 aria-controls="ipva-explanation"
 
-onClick​={() => setOpen((current) => !current)}
+onClick={() => setOpen((current) => !current)}
 
 >
 

@@ -128,7 +128,7 @@ aria-valuetext={`${value} por cento`}
 
 aria-describedby={`${id}-desc`}
 
-onChange​={(event) =>
+onChange={(event) =>
 
 onChange(rebalanceWeights(weights, criterion.id, Number(event.target.value)))
 
@@ -198,7 +198,7 @@ critério)
 
 {onReset ? (
 
-<button type="button" className="qc-btn-secondary mt-4" onClick​={onReset}>
+<button type="button" className="qc-btn-secondary mt-4" onClick={onReset}>
 
 Restaurar pesos do cenário
 

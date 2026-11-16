@@ -156,7 +156,7 @@ type="button"
 
 className="qc-btn border border-white text-white hover:bg-brand-800"
 
-onClick​={handleDemo}
+onClick={handleDemo}
 
 >
 

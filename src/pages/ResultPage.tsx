@@ -164,7 +164,7 @@ Editar parâmetros
 
 </Link>
 
-<button type="button" className="qc-btn-secondary" onClick​={() => window.print()}>
+<button type="button" className="qc-btn-secondary" onClick={() => window.print()}>
 
 Imprimir / salvar PDF
 
@@ -200,7 +200,7 @@ type="button"
 
 className="font-semibold underline"
 
-onClick​={() => void load('live', { force: true })}
+onClick={() => void load('live', { force: true })}
 
 disabled={status === 'loading'}
 
@@ -354,7 +354,7 @@ type="button"
 
 className="qc-btn-primary"
 
-onClick​={() => applySuggestion(suggestion.id)}
+onClick={() => applySuggestion(suggestion.id)}
 
 >
 
@@ -385,7 +385,7 @@ type="button"
 
 className="qc-btn-secondary"
 
-onClick​={() => navigate('/simulacao')}
+onClick={() => navigate('/simulacao')}
 
 >
 
@@ -441,7 +441,7 @@ className="qc-input"
 
 value={sortKey}
 
-onChange​={(event) => setSortKey(event.target.value as SortKey)}
+onChange={(event) => setSortKey(event.target.value as SortKey)}
 
 >
 
@@ -475,7 +475,7 @@ className="qc-input"
 
 value={groupSize}
 
-onChange​={(event) => setGroupSize(Number(event.target.value))}
+onChange={(event) => setGroupSize(Number(event.target.value))}
 
 >
 
@@ -565,7 +565,7 @@ to="/comparar"
 
 aria-disabled={compareIds.length < 2}
 
-onClick​={(event) => {
+onClick={(event) => {
 
 if (compareIds.length < 2) event.preventDefault()
 
@@ -581,7 +581,7 @@ Comparar selecionados ({compareIds.length}/{RECOMMENDATION_LIMITS.maxCompare})
 
 {compareIds.length > 0 ? (
 
-<button type="button" className="qc-btn-ghost" onClick​={clearCompare}>
+<button type="button" className="qc-btn-ghost" onClick={clearCompare}>
 
 Limpar seleção
 
@@ -629,9 +629,9 @@ reference={referenceWeights}
 
 compact
 
-onChange​={updateWeights}
+onChange={updateWeights}
 
-onReset​={() => {
+onReset={() => {
 
 updateWeights(referenceWeights)
 

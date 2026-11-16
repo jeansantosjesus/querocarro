@@ -196,13 +196,13 @@ actions={
 
 <>
 
-<button type="button" className="qc-btn-secondary" onClick​={duplicate}>
+<button type="button" className="qc-btn-secondary" onClick={duplicate}>
 
 Duplicar e editar
 
 </button>
 
-<button type="button" className="qc-btn-secondary" onClick​={recalculate}>
+<button type="button" className="qc-btn-secondary" onClick={recalculate}>
 
 Recalcular com preços atuais
 
@@ -214,7 +214,7 @@ type="button"
 
 className="qc-btn-secondary"
 
-onClick​={() => downloadJson(`simulacao-${current.title}`, current)}
+onClick={() => downloadJson(`simulacao-${current.title}`, current)}
 
 >
 
@@ -222,13 +222,13 @@ Exportar JSON
 
 </button>
 
-<button type="button" className="qc-btn-secondary" onClick​={() => window.print()}>
+<button type="button" className="qc-btn-secondary" onClick={() => window.print()}>
 
 Imprimir / salvar PDF
 
 </button>
 
-<button type="button" className="qc-btn-danger" onClick​={() => void remove()}>
+<button type="button" className="qc-btn-danger" onClick={() => void remove()}>
 
 Excluir
 

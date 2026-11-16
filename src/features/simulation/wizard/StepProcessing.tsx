@@ -40,7 +40,7 @@ return (
 
 </Alert>
 
-<button type="button" className="qc-btn-secondary" onClick​={onBack}>
+<button type="button" className="qc-btn-secondary" onClick={onBack}>
 
 Voltar e corrigir
 
@@ -68,13 +68,13 @@ return (
 
 <div className="flex flex-wrap gap-3">
 
-<button type="button" className="qc-btn-primary" onClick​={onRetry}>
+<button type="button" className="qc-btn-primary" onClick={onRetry}>
 
 Tentar novamente
 
 </button>
 
-<button type="button" className="qc-btn-secondary" onClick​={onBack}>
+<button type="button" className="qc-btn-secondary" onClick={onBack}>
 
 Voltar à revisão
 

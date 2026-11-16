@@ -350,7 +350,7 @@ index === stepIndex
 
 noValidate
 
-onSubmit​={(event) => {
+onSubmit={(event) => {
 
 event.preventDefault()
 
@@ -423,7 +423,7 @@ type="button"
 
 className="qc-btn-secondary"
 
-onClick​={goBack}
+onClick={goBack}
 
 disabled={stepIndex === 0}
 

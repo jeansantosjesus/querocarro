@@ -80,7 +80,7 @@ className="qc-input"
 
 value={value}
 
-onChange​={(event) => onValue(event.target.value)}
+onChange={(event) => onValue(event.target.value)}
 
 />
 
@@ -126,7 +126,7 @@ return (
 
 <form
 
-onSubmit​={handleSubmit}
+onSubmit={handleSubmit}
 
 noValidate
 
@@ -180,7 +180,7 @@ className="qc-input"
 
 value={form.registrationState}
 
-onChange​={(event) =>
+onChange={(event) =>
 
 onChange({
 
@@ -240,7 +240,7 @@ value={value}
 
 checked={form.condition === value}
 
-onChange​={() => onChange({ condition: value })}
+onChange={() => onChange({ condition: value })}
 
 />
 
@@ -262,7 +262,7 @@ className="mt-0.5 size-5"
 
 checked={form.allowDemonstrativeTax}
 
-onChange​={(event) => onChange({ allowDemonstrativeTax: event.target.checked })}
+onChange={(event) => onChange({ allowDemonstrativeTax: event.target.checked })}
 
 />
 
@@ -294,7 +294,7 @@ type="checkbox"
 
 checked={form.purchaseFinanced}
 
-onChange​={(event) => onChange({ purchaseFinanced: event.target.checked })}
+onChange={(event) => onChange({ purchaseFinanced: event.target.checked })}
 
 />
 
@@ -310,7 +310,7 @@ type="checkbox"
 
 checked={form.purchaseCash}
 
-onChange​={(event) => onChange({ purchaseCash: event.target.checked })}
+onChange={(event) => onChange({ purchaseCash: event.target.checked })}
 
 />
 
@@ -336,7 +336,7 @@ value="price"
 
 checked={form.amortization === 'price'}
 
-onChange​={() => onChange({ amortization: 'price' })}
+onChange={() => onChange({ amortization: 'price' })}
 
 />
 
@@ -356,7 +356,7 @@ value="sac"
 
 checked={form.amortization === 'sac'}
 
-onChange​={() => onChange({ amortization: 'sac' })}
+onChange={() => onChange({ amortization: 'sac' })}
 
 />
 
@@ -378,7 +378,7 @@ className="qc-input"
 
 value={form.horizonMonths}
 
-onChange​={(event) =>
+onChange={(event) =>
 
 onChange({
 
@@ -436,7 +436,7 @@ type="checkbox"
 
 checked={form.installments.includes(months)}
 
-onChange​={() => toggleInstallment(months)}
+onChange={() => toggleInstallment(months)}
 
 />
 
@@ -465,7 +465,7 @@ className="mt-0.5 size-5"
 
 checked={!form.hasIncome}
 
-onChange​={(event) => onChange({ hasIncome: !event.target.checked })}
+onChange={(event) => onChange({ hasIncome: !event.target.checked })}
 
 />
 

@@ -234,7 +234,7 @@ className="mt-1 size-5"
 
 checked={accepted}
 
-onChange​={(event) => setAccepted(event.target.checked)}
+onChange={(event) => setAccepted(event.target.checked)}
 
 />
 
@@ -256,7 +256,7 @@ type="button"
 
 className="qc-btn-primary mt-4"
 
-onClick​={() => void save()}
+onClick={() => void save()}
 
 disabled={saving || consent === null}
 

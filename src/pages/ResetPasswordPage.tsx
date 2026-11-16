@@ -132,7 +132,7 @@ type="button"
 
 className="qc-btn-primary"
 
-onClick​={() => navigate('/painel', { replace: true })}
+onClick={() => navigate('/painel', { replace: true })}
 
 >
 
@@ -162,7 +162,7 @@ subtitle="Escolha uma senha forte que você não use em outros serviços."
 
 />
 
-<form onSubmit​={handleSubmit(onSubmit)} noValidate className="qc-card space-y-5 p-6">
+<form onSubmit={handleSubmit(onSubmit)} noValidate className="qc-card space-y-5 p-6">
 
 {formError ? <Alert tone="bad">{formError}</Alert> : null}
 

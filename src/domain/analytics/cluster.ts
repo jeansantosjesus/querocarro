@@ -214,7 +214,8 @@ function buildKMeansGroups(
   const groups = clusters.map(({ items, tco }, position) => {
     const id = GROUP_LETTERS[position] ?? String(position + 1)
     for (const item of items) assignments.set(item.id, id)
-    const price = median(items.map((item) => item.price ?? 0))return {
+    const price = median(items.map((item) => item.price ?? 0))
+    return {
       id,
       label: `Grupo analítico ${id}`,
       size: items.length,

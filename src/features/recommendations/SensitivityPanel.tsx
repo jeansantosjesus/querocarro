@@ -102,7 +102,7 @@ className="qc-input"
 
 value={selected.vehicle.id}
 
-onChange​={(event) => setSelectedId(event.target.value)}
+onChange={(event) => setSelectedId(event.target.value)}
 
 >
 

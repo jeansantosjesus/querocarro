@@ -218,7 +218,7 @@ it('nunca devolve HTML ou scripts vindos do autor', async () => {
 
 const provider = providerFor(
 
-fetchWith([page({ artist: '<img src=x onerror​=alert(1)><​script>alert(2)<​/script>Zé' })]),
+fetchWith([page({ artist: '<img src=x onerror=alert(1)><script>alert(2)</script>Zé' })]),
 
 )
 
@@ -479,7 +479,7 @@ it('remove tags, normaliza espaços e não executa nada', () => {
 
 expect(htmlToPlainText('<b>Ana</b> <i>Souza</i>')).toBe('Ana Souza')
 
-expect(htmlToPlainText('<​script>x()<​/script>Oi')).toBe('Oi')
+expect(htmlToPlainText('<script>x()</script>Oi')).toBe('Oi')
 
 expect(htmlToPlainText('')).toBe('')
 

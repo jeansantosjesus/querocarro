@@ -52,7 +52,7 @@ weights={weights}
 
 reference={reference}
 
-onChange​={(next) => {
+onChange={(next) => {
 
 setValue('weights', next, { shouldDirty: true, shouldValidate: true })
 
@@ -60,7 +60,7 @@ setWeightsCustomized(true)
 
 }}
 
-onReset​={() => {
+onReset={() => {
 
 setValue('weights', reference, { shouldDirty: true, shouldValidate: true })
 

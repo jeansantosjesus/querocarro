@@ -276,7 +276,7 @@ Voltar ao resultado
 
 </Link>
 
-<button type="button" className="qc-btn-secondary" onClick​={() => window.print()}>
+<button type="button" className="qc-btn-secondary" onClick={() => window.print()}>
 
 Imprimir / salvar PDF
 
@@ -342,7 +342,7 @@ type="button"
 
 className="font-semibold text-bad-fg underline"
 
-onClick​={() => toggleCompare(item.vehicle.id)}
+onClick={() => toggleCompare(item.vehicle.id)}
 
 >
 

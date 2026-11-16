@@ -90,7 +90,7 @@ placeholder="Ex.: TCO, IPVA, financiamento, Price"
 
 value={query}
 
-onChange​={(event) => setQuery(event.target.value)}
+onChange={(event) => setQuery(event.target.value)}
 
 />
 
@@ -410,7 +410,7 @@ Central de ajuda
 
 href={`#${item.id}`}
 
-onClick​={(event) => {
+onClick={(event) => {
 
 event.preventDefault()
 

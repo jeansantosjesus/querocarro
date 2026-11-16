@@ -270,7 +270,7 @@ checked={selected}
 
 disabled={compareDisabled && !selected}
 
-onChange​={() => onToggleCompare(vehicle.id)}
+onChange={() => onToggleCompare(vehicle.id)}
 
 />
 

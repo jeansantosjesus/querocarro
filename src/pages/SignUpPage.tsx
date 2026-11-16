@@ -164,7 +164,7 @@ modo demonstração
 
 
 
-<form onSubmit​={handleSubmit(onSubmit)} noValidate className="qc-card space-y-5 p-6">
+<form onSubmit={handleSubmit(onSubmit)} noValidate className="qc-card space-y-5 p-6">
 
 {formError ? <Alert tone="bad">{formError}</Alert> : null}
 

@@ -205,7 +205,8 @@ export function runDecision(
         assumptions,
         referenceYear: options.referenceYear,
       }),
-    )const criteria = {
+    )
+    const criteria = {
       tco: tco.criterionValue,
       incomeCommitment: financial.financialScore,
       usageFit: calculateUsageFit(vehicle, input.usage),

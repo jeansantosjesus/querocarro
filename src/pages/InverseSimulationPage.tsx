@@ -248,7 +248,7 @@ Veículo escolhido
 
 
 
-<InverseForm form={form} errors={errors} onChange​={handleChange} onSubmit​={handleSubmit} />
+<InverseForm form={form} errors={errors} onChange={handleChange} onSubmit={handleSubmit} />
 
 
 
