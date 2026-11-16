@@ -1,84 +1,72 @@
+import { zodResolver } from '@hookform/resolvers/zod'
 import { useState } from 'react'
+import { useForm } from 'react-hook-form'
 import { Link } from 'react-router-dom'
 import { Alert } from '../components/ui/Alert'
+import { Field } from '../components/ui/Field'
 import { PageTitle } from '../components/ui/PageTitle'
 import { useAuth } from '../features/auth/AuthContext'
+import { AUTH_MESSAGES } from '../services/auth/types'
+import { forgotPasswordSchema, type ForgotPasswordValues } from '../schemas/auth'
 
 export function ForgotPasswordPage() {
-  const { resetPassword } = useAuth()
-  const [email, setEmail] = useState('')
-  const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState(false)
-  const [loading, setLoading] = useState(false)
+  const { requestPasswordReset } = useAuth()
+  const [sent, setSent] = useState(false)
+  const [formError, setFormError] = useState<string | null>(null)
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    setError(null)
-    setLoading(true)
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<ForgotPasswordValues>({
+    resolver: zodResolver(forgotPasswordSchema),
+    defaultValues: { email: '' },
+  })
 
-    try {
-      await resetPassword(email)
-      setSuccess(true)
-    } catch (err: unknown) {
-      setError(
-        err instanceof Error ? err.message : 'Ocorreu um erro ao enviar o e-mail de recuperação.',
-      )
-    } finally {
-      setLoading(false)
+  async function onSubmit(values: ForgotPasswordValues) {
+    setFormError(null)
+    const result = await requestPasswordReset(values.email)
+    if (!result.ok) {
+      setFormError(result.message)
+      return
     }
+    setSent(true)
   }
 
   return (
-    <div className="mx-auto max-w-md space-y-6 py-8">
+    <div className="mx-auto max-w-lg">
       <PageTitle
         title="Recuperar senha"
-        subtitle="Informe seu e-mail cadastrado para receber as instruções de redefinição."
+        subtitle="Informe seu e-mail para receber um link de redefinição."
       />
 
-      {error ? (
-        <Alert tone="error" title="Atenção">
-          {error}
-        </Alert>
-      ) : null}
-
-      {success ? (
-        <div className="space-y-4">
-          <Alert tone="success" title="E-mail enviado!">
-            Se houver uma conta associada a <strong>{email}</strong>, você receberá um link para
-            redefinir sua senha em instantes.
-          </Alert>
-          <Link to="/login" className="qc-btn-primary block text-center">
-            Voltar para o login
-          </Link>
-        </div>
+      {sent ? (
+        <Alert tone="good">{AUTH_MESSAGES.resetSent}</Alert>
       ) : (
-        <form onSubmit={handleSubmit} className="qc-card space-y-4 p-6">
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-ink-900">
-              E-mail
-            </label>
-            <input
-              id="email"
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="mt-1 block w-full rounded-md border border-ink-300 px-3 py-2 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
-              placeholder="seu.email@exemplo.com"
-            />
-          </div>
-
-          <button type="submit" disabled={loading} className="qc-btn-primary w-full justify-center">
-            {loading ? 'Enviando...' : 'Enviar instruções'}
+        <form onSubmit={handleSubmit(onSubmit)} noValidate className="qc-card space-y-5 p-6">
+          {formError ? <Alert tone="bad">{formError}</Alert> : null}
+          <Field label="E-mail" required error={errors.email?.message}>
+            {(props) => (
+              <input
+                {...props}
+                type="email"
+                className="qc-input"
+                autoComplete="email"
+                {...register('email')}
+              />
+            )}
+          </Field>
+          <button type="submit" className="qc-btn-primary w-full" disabled={isSubmitting}>
+            {isSubmitting ? 'Enviando…' : 'Enviar link de redefinição'}
           </button>
-
-          <div className="text-center text-sm">
-            <Link to="/login" className="font-semibold text-brand-800 underline">
-              Voltar ao login
-            </Link>
-          </div>
         </form>
       )}
+
+      <p className="mt-6 text-sm">
+        <Link to="/entrar" className="font-semibold text-brand-800 underline">
+          Voltar ao login
+        </Link>
+      </p>
     </div>
   )
 }
