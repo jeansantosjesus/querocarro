@@ -20,7 +20,9 @@ export function ForgotPasswordPage() {
       await resetPassword(email)
       setSuccess(true)
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Ocorreu um erro ao enviar o e-mail de recuperação.')
+      setError(
+        err instanceof Error ? err.message : 'Ocorreu um erro ao enviar o e-mail de recuperação.',
+      )
     } finally {
       setLoading(false)
     }
@@ -33,12 +35,17 @@ export function ForgotPasswordPage() {
         subtitle="Informe seu e-mail cadastrado para receber as instruções de redefinição."
       />
 
-      {error ? <Alert tone="error" title="Atenção">{error}</Alert> : null}
+      {error ? (
+        <Alert tone="error" title="Atenção">
+          {error}
+        </Alert>
+      ) : null}
 
       {success ? (
         <div className="space-y-4">
           <Alert tone="success" title="E-mail enviado!">
-            Se houver uma conta associada a <strong>{email}</strong>, você receberá um link para redefinir sua senha em instantes.
+            Se houver uma conta associada a <strong>{email}</strong>, você receberá um link para
+            redefinir sua senha em instantes.
           </Alert>
           <Link to="/login" className="qc-btn-primary block text-center">
             Voltar para o login
@@ -61,11 +68,7 @@ export function ForgotPasswordPage() {
             />
           </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="qc-btn-primary w-full justify-center"
-          >
+          <button type="submit" disabled={loading} className="qc-btn-primary w-full justify-center">
             {loading ? 'Enviando...' : 'Enviar instruções'}
           </button>
 
