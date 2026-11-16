@@ -620,7 +620,9 @@ const ARTICLE_FONTES: HelpArticle = {
     'A FIPE mostra apenas referência de mercado. O preço negociado pode ser diferente.',
     'Consumo, manutenção e depreciação vêm de uma base demonstrativa, não da FIPE.',
   ],
-}const ARTICLE_PRIVACIDADE: HelpArticle = {
+}
+
+const ARTICLE_PRIVACIDADE: HelpArticle = {
   slug: 'privacidade',
   title: 'Privacidade e segurança',
   summary: 'O que o QC pede, onde os dados ficam e o que nunca pede.',
