@@ -167,4 +167,4 @@ export function rankByIndex<T extends { index: number; vehicle: Vehicle }>(
     (a, b) =>
       b.index - a.index || (a.vehicle.id < b.vehicle.id ? -1 : a.vehicle.id > b.vehicle.id ? 1 : 0),
   )
-                     }
+}

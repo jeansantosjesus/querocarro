@@ -1,13 +1,8 @@
 import {
-
-GOVERNMENT_SOURCE_KEYS,
-
-PROVENANCE_ENTRIES,
-
-UNRECORDED_PREMISES,
-
-type ProvenanceKey,
-
+  GOVERNMENT_SOURCE_KEYS,
+  PROVENANCE_ENTRIES,
+  UNRECORDED_PREMISES,
+  type ProvenanceKey,
 } from '../../config/provenance'
 
 import type { BrazilianStateCode, RegionalTaxRule } from '../../types/regionalTax'
@@ -15,8 +10,6 @@ import type { BrazilianStateCode, RegionalTaxRule } from '../../types/regionalTa
 import type { Vehicle, VehicleCatalog } from '../../types/vehicle'
 
 import { validateRegionalRule } from '../finance/regionalTax'
-
-
 
 /**
 
@@ -26,446 +19,333 @@ import { validateRegionalRule } from '../finance/regionalTax'
 
 */
 
-
-
 export interface DataReportInput {
+  catalog: VehicleCatalog
 
-catalog: VehicleCatalog
+  /** Todas as regras cadastradas (qualquer UF). */
 
-/** Todas as regras cadastradas (qualquer UF). */
+  rules: readonly RegionalTaxRule[]
 
-rules: readonly RegionalTaxRule[]
+  /** As 27 UFs, na ordem de exibição. */
 
-/** As 27 UFs, na ordem de exibição. */
+  states: readonly BrazilianStateCode[]
 
-states: readonly BrazilianStateCode[]
+  /** Data de referência (YYYY-MM-DD) usada para julgar vigência. */
 
-/** Data de referência (YYYY-MM-DD) usada para julgar vigência. */
+  asOf: string
 
-asOf: string
+  /** Data da última atualização da base complementar. */
 
-/** Data da última atualização da base complementar. */
-
-supplementUpdatedAt: string
-
+  supplementUpdatedAt: string
 }
-
-
 
 /** Campos do veículo que entram na cobertura. Ausente conta como ausente, nunca como zero. */
 
 export const COVERAGE_FIELDS = [
+  'priceBRL',
 
-'priceBRL',
+  'referenceMonth',
 
-'referenceMonth',
+  'fuel',
 
-'fuel',
+  'transmission',
 
-'transmission',
+  'urbanConsumption',
 
-'urbanConsumption',
+  'highwayConsumption',
 
-'highwayConsumption',
+  'maintenanceAnnualBRL',
 
-'maintenanceAnnualBRL',
+  'insuranceCategory',
 
-'insuranceCategory',
+  'depreciationAnnualPct',
 
-'depreciationAnnualPct',
+  'category',
 
-'category',
+  'trunkLiters',
 
-'trunkLiters',
-
-'seats',
-
+  'seats',
 ] as const satisfies readonly (keyof Vehicle)[]
-
-
 
 export type CoverageField = (typeof COVERAGE_FIELDS)[number]
 
-
-
 export interface FieldCoverage {
+  field: CoverageField
 
-field: CoverageField
+  available: number
 
-available: number
+  missing: number
 
-missing: number
-
-total: number
-
+  total: number
 }
-
-
 
 export type InvalidReason =
-
-| 'id_inconsistente'
-
-| 'id_duplicado'
-
-| 'preco_invalido'
-
-| 'ano_invalido'
-
-| 'mes_invalido'
-
-| 'valor_invalido'
-
-
+  | 'id_inconsistente'
+  | 'id_duplicado'
+  | 'preco_invalido'
+  | 'ano_invalido'
+  | 'mes_invalido'
+  | 'valor_invalido'
 
 export interface InvalidRecord {
+  id: string
 
-id: string
-
-reasons: InvalidReason[]
-
+  reasons: InvalidReason[]
 }
-
-
 
 export type StateCoverageStatus =
-
-'verificada' | 'demonstracao' | 'pendente_ou_vencida' | 'sem_regra'
-
-
+  'verificada' | 'demonstracao' | 'pendente_ou_vencida' | 'sem_regra'
 
 export interface StateCoverage {
+  state: BrazilianStateCode
 
-state: BrazilianStateCode
+  status: StateCoverageStatus
 
-status: StateCoverageStatus
-
-ruleIds: string[]
-
+  ruleIds: string[]
 }
-
-
 
 export interface DataReport {
+  asOf: string
 
-asOf: string
+  catalog: {
+    version: string
 
-catalog: {
+    referenceMonth: string | null
 
-version: string
+    fetchedAt: string
 
-referenceMonth: string | null
+    liveStatus: VehicleCatalog['liveStatus']
 
-fetchedAt: string
+    vehicleCount: number
 
-liveStatus: VehicleCatalog['liveStatus']
+    onlineCount: number
 
-vehicleCount: number
+    snapshotCount: number
 
-onlineCount: number
+    supplementUpdatedAt: string
+  }
 
-snapshotCount: number
+  coverageByField: FieldCoverage[]
 
-supplementUpdatedAt: string
+  vehiclesWithSupplement: number
 
+  vehiclesWithoutSupplement: number
+
+  invalidRecords: InvalidRecord[]
+
+  stateCoverage: StateCoverage[]
+
+  /** UFs sem regra oficial verificada (inclui demonstração, sem regra e regra pendente ou vencida). */
+
+  statesWithoutVerifiedRule: BrazilianStateCode[]
+
+  expiredRules: { id: string; state: BrazilianStateCode; validUntil: string }[]
+
+  pendingRules: { id: string; state: BrazilianStateCode }[]
+
+  rulesWithoutVerification: string[]
+
+  /** Chaves de proveniência com origem "premissa" ou "demonstração" e sem URL de fonte. */
+
+  valuesWithoutExternalSource: ProvenanceKey[]
+
+  /** Fontes oficiais cadastradas. Zero significa que nenhum valor tem fonte oficial no QC. */
+
+  governmentSourceCount: number
+
+  unrecordedPremises: readonly { id: string; description: string }[]
 }
-
-coverageByField: FieldCoverage[]
-
-vehiclesWithSupplement: number
-
-vehiclesWithoutSupplement: number
-
-invalidRecords: InvalidRecord[]
-
-stateCoverage: StateCoverage[]
-
-/** UFs sem regra oficial verificada (inclui demonstração, sem regra e regra pendente ou vencida). */
-
-statesWithoutVerifiedRule: BrazilianStateCode[]
-
-expiredRules: { id: string; state: BrazilianStateCode; validUntil: string }[]
-
-pendingRules: { id: string; state: BrazilianStateCode }[]
-
-rulesWithoutVerification: string[]
-
-/** Chaves de proveniência com origem "premissa" ou "demonstração" e sem URL de fonte. */
-
-valuesWithoutExternalSource: ProvenanceKey[]
-
-/** Fontes oficiais cadastradas. Zero significa que nenhum valor tem fonte oficial no QC. */
-
-governmentSourceCount: number
-
-unrecordedPremises: readonly { id: string; description: string }[]
-
-}
-
-
 
 const MONTH_PATTERN = /^\d{4}-\d{2}$/
 
 const MIN_MODEL_YEAR = 1950
 
-
-
 function isPresent<T>(value: T | null | undefined): value is T {
-
-return value !== null && value !== undefined
-
+  return value !== null && value !== undefined
 }
-
-
 
 function coverageOf(vehicles: readonly Vehicle[]): FieldCoverage[] {
+  return COVERAGE_FIELDS.map((field) => {
+    const available = vehicles.filter((vehicle) => isPresent(vehicle[field])).length
 
-return COVERAGE_FIELDS.map((field) => {
-
-const available = vehicles.filter((vehicle) => isPresent(vehicle[field])).length
-
-return { field, available, missing: vehicles.length - available, total: vehicles.length }
-
-})
-
+    return { field, available, missing: vehicles.length - available, total: vehicles.length }
+  })
 }
-
-
 
 function invalidReasons(vehicle: Vehicle, asOfYear: number): InvalidReason[] {
+  const reasons: InvalidReason[] = []
 
-const reasons: InvalidReason[] = []
+  if (vehicle.id !== `${vehicle.fipeCode}:${vehicle.fipeYearId}`) reasons.push('id_inconsistente')
 
-if (vehicle.id !== `${vehicle.fipeCode}:${vehicle.fipeYearId}`) reasons.push('id_inconsistente')
+  if (
+    isPresent(vehicle.priceBRL) &&
+    (!Number.isFinite(vehicle.priceBRL) || vehicle.priceBRL <= 0)
+  ) {
+    reasons.push('preco_invalido')
+  }
 
-if (
+  if (
+    !Number.isInteger(vehicle.modelYear) ||
+    vehicle.modelYear < MIN_MODEL_YEAR ||
+    vehicle.modelYear > asOfYear + 1
+  ) {
+    reasons.push('ano_invalido')
+  }
 
-isPresent(vehicle.priceBRL) &&
+  if (isPresent(vehicle.referenceMonth) && !MONTH_PATTERN.test(vehicle.referenceMonth)) {
+    reasons.push('mes_invalido')
+  }
 
-(!Number.isFinite(vehicle.priceBRL) || vehicle.priceBRL <= 0)
+  const numbers = [
+    vehicle.urbanConsumption,
 
-) {
+    vehicle.highwayConsumption,
 
-reasons.push('preco_invalido')
+    vehicle.maintenanceAnnualBRL,
 
+    vehicle.depreciationAnnualPct,
+
+    vehicle.trunkLiters,
+
+    vehicle.seats,
+  ]
+
+  if (numbers.some((value) => isPresent(value) && (!Number.isFinite(value) || value < 0))) {
+    reasons.push('valor_invalido')
+  }
+
+  return reasons
 }
-
-if (
-
-!Number.isInteger(vehicle.modelYear) ||
-
-vehicle.modelYear < MIN_MODEL_YEAR ||
-
-vehicle.modelYear > asOfYear + 1
-
-) {
-
-reasons.push('ano_invalido')
-
-}
-
-if (isPresent(vehicle.referenceMonth) && !MONTH_PATTERN.test(vehicle.referenceMonth)) {
-
-reasons.push('mes_invalido')
-
-}
-
-const numbers = [
-
-vehicle.urbanConsumption,
-
-vehicle.highwayConsumption,
-
-vehicle.maintenanceAnnualBRL,
-
-vehicle.depreciationAnnualPct,
-
-vehicle.trunkLiters,
-
-vehicle.seats,
-
-]
-
-if (numbers.some((value) => isPresent(value) && (!Number.isFinite(value) || value < 0))) {
-
-reasons.push('valor_invalido')
-
-}
-
-return reasons
-
-}
-
-
 
 function invalidRecordsOf(vehicles: readonly Vehicle[], asOfYear: number): InvalidRecord[] {
+  const seen = new Set<string>()
 
-const seen = new Set<string>()
+  const records: InvalidRecord[] = []
 
-const records: InvalidRecord[] = []
+  for (const vehicle of vehicles) {
+    const reasons = invalidReasons(vehicle, asOfYear)
 
-for (const vehicle of vehicles) {
+    if (seen.has(vehicle.id)) reasons.push('id_duplicado')
 
-const reasons = invalidReasons(vehicle, asOfYear)
+    seen.add(vehicle.id)
 
-if (seen.has(vehicle.id)) reasons.push('id_duplicado')
+    if (reasons.length > 0) records.push({ id: vehicle.id, reasons })
+  }
 
-seen.add(vehicle.id)
-
-if (reasons.length > 0) records.push({ id: vehicle.id, reasons })
-
+  return records
 }
-
-return records
-
-}
-
-
 
 function stateStatus(rules: readonly RegionalTaxRule[], asOf: string): StateCoverageStatus {
+  if (rules.length === 0) return 'sem_regra'
 
-if (rules.length === 0) return 'sem_regra'
+  const usable = rules.filter((rule) => {
+    const check = validateRegionalRule(rule, asOf)
 
-const usable = rules.filter((rule) => {
+    return check.valid && !check.expired
+  })
 
-const check = validateRegionalRule(rule, asOf)
+  if (usable.some((rule) => rule.status === 'verificada')) return 'verificada'
 
-return check.valid && !check.expired
+  if (usable.some((rule) => rule.status === 'demonstracao')) return 'demonstracao'
 
-})
-
-if (usable.some((rule) => rule.status === 'verificada')) return 'verificada'
-
-if (usable.some((rule) => rule.status === 'demonstracao')) return 'demonstracao'
-
-return 'pendente_ou_vencida'
-
+  return 'pendente_ou_vencida'
 }
-
-
 
 /** Monta o relatório técnico a partir do catálogo e das regras cadastradas. */
 
 export function buildDataReport(input: DataReportInput): DataReport {
+  const { catalog, rules, states, asOf } = input
 
-const { catalog, rules, states, asOf } = input
+  const asOfYear = Number(asOf.slice(0, 4))
 
-const asOfYear = Number(asOf.slice(0, 4))
+  const vehicles = catalog.vehicles
 
-const vehicles = catalog.vehicles
+  const stateCoverage: StateCoverage[] = states.map((state) => {
+    const stateRules = rules.filter((rule) => rule.state === state)
 
+    return {
+      state,
 
+      status: stateStatus(stateRules, asOf),
 
-const stateCoverage: StateCoverage[] = states.map((state) => {
+      ruleIds: stateRules.map((rule) => rule.id),
+    }
+  })
 
-const stateRules = rules.filter((rule) => rule.state === state)
+  const expiredRules = rules
 
-return {
+    .filter((rule) => validateRegionalRule(rule, asOf).expired)
 
-state,
+    .map((rule) => ({ id: rule.id, state: rule.state, validUntil: rule.validUntil }))
 
-status: stateStatus(stateRules, asOf),
+  const pendingRules = rules
 
-ruleIds: stateRules.map((rule) => rule.id),
+    .filter((rule) => rule.status === 'pendente')
 
-}
+    .map((rule) => ({ id: rule.id, state: rule.state }))
 
-})
+  const valuesWithoutExternalSource = (Object.keys(PROVENANCE_ENTRIES) as ProvenanceKey[]).filter(
+    (key) => {
+      const entry = PROVENANCE_ENTRIES[key]
 
+      return (
+        (entry.origin === 'estimated' || entry.origin === 'demonstration') &&
+        entry.sourceUrl === null
+      )
+    },
+  )
 
+  return {
+    asOf,
 
-const expiredRules = rules
+    catalog: {
+      version: catalog.version,
 
-.filter((rule) => validateRegionalRule(rule, asOf).expired)
+      referenceMonth: catalog.referenceMonth,
 
-.map((rule) => ({ id: rule.id, state: rule.state, validUntil: rule.validUntil }))
+      fetchedAt: catalog.fetchedAt,
 
+      liveStatus: catalog.liveStatus,
 
+      vehicleCount: vehicles.length,
 
-const pendingRules = rules
+      onlineCount: catalog.onlineCount,
 
-.filter((rule) => rule.status === 'pendente')
+      snapshotCount: catalog.snapshotCount,
 
-.map((rule) => ({ id: rule.id, state: rule.state }))
+      supplementUpdatedAt: input.supplementUpdatedAt,
+    },
 
+    coverageByField: coverageOf(vehicles),
 
+    vehiclesWithSupplement: vehicles.filter((vehicle) => vehicle.hasSupplement).length,
 
-const valuesWithoutExternalSource = (Object.keys(PROVENANCE_ENTRIES) as ProvenanceKey[]).filter(
+    vehiclesWithoutSupplement: vehicles.filter((vehicle) => !vehicle.hasSupplement).length,
 
-(key) => {
+    invalidRecords: invalidRecordsOf(vehicles, asOfYear),
 
-const entry = PROVENANCE_ENTRIES[key]
+    stateCoverage,
 
-return (
+    statesWithoutVerifiedRule: stateCoverage
 
-(entry.origin === 'estimated' || entry.origin === 'demonstration') &&
+      .filter((item) => item.status !== 'verificada')
 
-entry.sourceUrl === null
+      .map((item) => item.state),
 
-)
+    expiredRules,
 
-},
+    pendingRules,
 
-)
+    rulesWithoutVerification: rules
 
+      .filter((rule) => rule.lastVerifiedAt === null)
 
+      .map((rule) => rule.id),
 
-return {
+    valuesWithoutExternalSource,
 
-asOf,
+    governmentSourceCount: GOVERNMENT_SOURCE_KEYS.length,
 
-catalog: {
-
-version: catalog.version,
-
-referenceMonth: catalog.referenceMonth,
-
-fetchedAt: catalog.fetchedAt,
-
-liveStatus: catalog.liveStatus,
-
-vehicleCount: vehicles.length,
-
-onlineCount: catalog.onlineCount,
-
-snapshotCount: catalog.snapshotCount,
-
-supplementUpdatedAt: input.supplementUpdatedAt,
-
-},
-
-coverageByField: coverageOf(vehicles),
-
-vehiclesWithSupplement: vehicles.filter((vehicle) => vehicle.hasSupplement).length,
-
-vehiclesWithoutSupplement: vehicles.filter((vehicle) => !vehicle.hasSupplement).length,
-
-invalidRecords: invalidRecordsOf(vehicles, asOfYear),
-
-stateCoverage,
-
-statesWithoutVerifiedRule: stateCoverage
-
-.filter((item) => item.status !== 'verificada')
-
-.map((item) => item.state),
-
-expiredRules,
-
-pendingRules,
-
-rulesWithoutVerification: rules
-
-.filter((rule) => rule.lastVerifiedAt === null)
-
-.map((rule) => rule.id),
-
-valuesWithoutExternalSource,
-
-governmentSourceCount: GOVERNMENT_SOURCE_KEYS.length,
-
-unrecordedPremises: UNRECORDED_PREMISES,
-
-}
-
+    unrecordedPremises: UNRECORDED_PREMISES,
+  }
 }

@@ -1,251 +1,209 @@
 import type { Fuel } from './vehicle'
 
-
-
 /** Siglas oficiais das 27 unidades federativas, na ordem pedida pela interface. */
 
 export const BRAZILIAN_STATE_CODES = [
+  'AC',
 
-'AC',
+  'AL',
 
-'AL',
+  'AP',
 
-'AP',
+  'AM',
 
-'AM',
+  'BA',
 
-'BA',
+  'CE',
 
-'CE',
+  'DF',
 
-'DF',
+  'ES',
 
-'ES',
+  'GO',
 
-'GO',
+  'MA',
 
-'MA',
+  'MT',
 
-'MT',
+  'MS',
 
-'MS',
+  'MG',
 
-'MG',
+  'PA',
 
-'PA',
+  'PB',
 
-'PB',
+  'PR',
 
-'PR',
+  'PE',
 
-'PE',
+  'PI',
 
-'PI',
+  'RJ',
 
-'RJ',
+  'RN',
 
-'RN',
+  'RS',
 
-'RS',
+  'RO',
 
-'RO',
+  'RR',
 
-'RR',
+  'SC',
 
-'SC',
+  'SP',
 
-'SP',
+  'SE',
 
-'SE',
-
-'TO',
-
+  'TO',
 ] as const
-
-
 
 export type BrazilianStateCode = (typeof BRAZILIAN_STATE_CODES)[number]
 
-
-
 export type TaxRuleStatus = 'verificada' | 'pendente' | 'vencida' | 'demonstracao'
-
-
 
 /** oficial só existe para regra verificada. O restante nunca é apresentado como lei. */
 
 export type TaxConfidence = 'oficial' | 'demonstracao' | 'manual' | 'indisponivel'
 
-
-
 export type VehicleConditionScope = 'qualquer' | 'novo' | 'usado'
 
 export type PropulsionScope = 'qualquer' | 'combustao' | 'hibrido' | 'eletrico'
 
-
-
 export interface ExemptionRule {
+  id: string
 
-id: string
+  state: BrazilianStateCode
 
-state: BrazilianStateCode
+  description: string
 
-description: string
+  vehicleCondition: VehicleConditionScope
 
-vehicleCondition: VehicleConditionScope
+  propulsion: PropulsionScope
 
-propulsion: PropulsionScope
+  /** null = isenção total (alíquota zero explícita da regra). Número = alíquota substituta. */
 
-/** null = isenção total (alíquota zero explícita da regra). Número = alíquota substituta. */
+  ratePct: number | null
 
-ratePct: number | null
+  source: string
 
-source: string
+  legalBasis: string
 
-legalBasis: string
+  fiscalYear: number
 
-fiscalYear: number
+  validFrom: string
 
-validFrom: string
+  validUntil: string
 
-validUntil: string
+  lastVerifiedAt: string | null
 
-lastVerifiedAt: string | null
-
-status: TaxRuleStatus
-
+  status: TaxRuleStatus
 }
-
-
 
 export interface RegionalTaxRule {
+  id: string
 
-id: string
+  state: BrazilianStateCode
 
-state: BrazilianStateCode
+  tax: 'ipva'
 
-tax: 'ipva'
+  vehicleCondition: VehicleConditionScope
 
-vehicleCondition: VehicleConditionScope
+  propulsion: PropulsionScope
 
-propulsion: PropulsionScope
+  /** Alíquota em % da base. Exclusiva com `fixedAmountBRL`. */
 
-/** Alíquota em % da base. Exclusiva com `fixedAmountBRL`. */
+  ratePct: number | null
 
-ratePct: number | null
+  fixedAmountBRL: number | null
 
-fixedAmountBRL: number | null
+  exemptions: ExemptionRule[]
 
-exemptions: ExemptionRule[]
+  source: string
 
-source: string
+  legalBasis: string
 
-legalBasis: string
+  fiscalYear: number
 
-fiscalYear: number
+  validFrom: string
 
-validFrom: string
+  validUntil: string
 
-validUntil: string
+  lastVerifiedAt: string | null
 
-lastVerifiedAt: string | null
-
-status: TaxRuleStatus
-
+  status: TaxRuleStatus
 }
-
-
 
 export type RegionalTaxAlertCode =
-
-| 'regra_ausente'
-
-| 'regra_pendente'
-
-| 'regra_vencida'
-
-| 'regra_invalida'
-
-| 'demonstracao'
-
-| 'manual'
-
-| 'isencao'
-
-| 'arredondamento'
-
-
+  | 'regra_ausente'
+  | 'regra_pendente'
+  | 'regra_vencida'
+  | 'regra_invalida'
+  | 'demonstracao'
+  | 'manual'
+  | 'isencao'
+  | 'arredondamento'
 
 export interface RegionalTaxAlert {
+  code: RegionalTaxAlertCode
 
-code: RegionalTaxAlertCode
-
-message: string
-
+  message: string
 }
-
-
 
 /** Fotografia do IPVA usado para um veículo nesta simulação. */
 
 export interface RegionalTaxCalculation {
+  state: BrazilianStateCode
 
-state: BrazilianStateCode
+  baseBRL: number | null
 
-baseBRL: number | null
+  ratePct: number | null
 
-ratePct: number | null
+  fixedAmountBRL: number | null
 
-fixedAmountBRL: number | null
+  annualBRL: number | null
 
-annualBRL: number | null
+  monthlyBRL: number | null
 
-monthlyBRL: number | null
+  /** Regra do catálogo consultada, mesmo quando outra fonte (manual ou estimativa) foi aplicada. */
 
-/** Regra do catálogo consultada, mesmo quando outra fonte (manual ou estimativa) foi aplicada. */
+  rule: RegionalTaxRule | null
 
-rule: RegionalTaxRule | null
+  exemption: ExemptionRule | null
 
-exemption: ExemptionRule | null
+  source: string
 
-source: string
+  legalBasis: string | null
 
-legalBasis: string | null
+  fiscalYear: number | null
 
-fiscalYear: number | null
+  alerts: RegionalTaxAlert[]
 
-alerts: RegionalTaxAlert[]
+  confidence: TaxConfidence
 
-confidence: TaxConfidence
-
-explanation: string
-
+  explanation: string
 }
 
-
-
 export interface RegionalTaxQuery {
+  state: BrazilianStateCode
 
-state: BrazilianStateCode
+  priceBRL: number | null
 
-priceBRL: number | null
+  condition: 'novo' | 'usado' | 'indiferente'
 
-condition: 'novo' | 'usado' | 'indiferente'
+  fuel: Fuel | null
 
-fuel: Fuel | null
+  /** Data de referência ISO (YYYY-MM-DD). O motor não lê o relógio. */
 
-/** Data de referência ISO (YYYY-MM-DD). O motor não lê o relógio. */
+  asOf: string
 
-asOf: string
+  /** Preenchido só quando a pessoa informa a alíquota nesta simulação. */
 
-/** Preenchido só quando a pessoa informa a alíquota nesta simulação. */
+  manualRatePct: number | undefined
 
-manualRatePct: number | undefined
+  allowDemonstrativeEstimate: boolean
 
-allowDemonstrativeEstimate: boolean
+  /** Alíquota da estimativa configurável, usada só no modo demonstração explícito. */
 
-/** Alíquota da estimativa configurável, usada só no modo demonstração explícito. */
-
-demonstrativeRatePct: number
-
+  demonstrativeRatePct: number
 }

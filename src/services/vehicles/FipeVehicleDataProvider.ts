@@ -5,17 +5,11 @@ import { SUPPLEMENT_DATA } from '../../config/vehicleSupplementData'
 import { FIPE_SNAPSHOT, type FipeSnapshotEntry } from '../../mocks/fipeSnapshot'
 
 import type {
-
-LoadCatalogOptions,
-
-SupplementRecord,
-
-Vehicle,
-
-VehicleCatalog,
-
-VehicleDataProvider,
-
+  LoadCatalogOptions,
+  SupplementRecord,
+  Vehicle,
+  VehicleCatalog,
+  VehicleDataProvider,
 } from '../../types/vehicle'
 
 import { FipeError, isFipeError } from '../fipe/errors'
@@ -25,8 +19,6 @@ import type { FipeClient } from '../fipe/client'
 import { buildCatalog, mergeVehicle } from './merge'
 
 import { indexSnapshot, snapshotKey } from './MockVehicleDataProvider'
-
-
 
 /**
 
@@ -45,183 +37,129 @@ import { indexSnapshot, snapshotKey } from './MockVehicleDataProvider'
 */
 
 export class FipeVehicleDataProvider implements VehicleDataProvider {
+  readonly id = 'fipe'
 
-readonly id = 'fipe'
+  readonly label = 'Tabela FIPE (consulta online, com referência salva como alternativa)'
 
-readonly label = 'Tabela FIPE (consulta online, com referência salva como alternativa)'
+  constructor(
+    private readonly client: FipeClient,
 
+    private readonly supplement: readonly SupplementRecord[] = SUPPLEMENT_DATA,
 
+    private readonly snapshot: readonly FipeSnapshotEntry[] = FIPE_SNAPSHOT,
 
-constructor(
+    private readonly concurrency: number = FIPE_CONFIG.concurrency,
+  ) {}
 
-private readonly client: FipeClient,
+  async loadCatalog(options?: LoadCatalogOptions): Promise<VehicleCatalog> {
+    const snapshotIndex = indexSnapshot(this.snapshot)
 
-private readonly supplement: readonly SupplementRecord[] = SUPPLEMENT_DATA,
+    const total = this.supplement.length
 
-private readonly snapshot: readonly FipeSnapshotEntry[] = FIPE_SNAPSHOT,
+    const results: Array<Vehicle | null> = new Array<Vehicle | null>(total).fill(null)
 
-private readonly concurrency: number = FIPE_CONFIG.concurrency,
+    const failures = new Map<string, number>()
 
-) {}
+    let stopLive = false
 
+    let done = 0
 
+    let cursor = 0
 
-async loadCatalog(options?: LoadCatalogOptions): Promise<VehicleCatalog> {
+    let userMessage: string | null = null
 
-const snapshotIndex = indexSnapshot(this.snapshot)
+    const worker = async () => {
+      for (;;) {
+        const index = cursor
 
-const total = this.supplement.length
+        cursor += 1
 
-const results: Array<Vehicle | null> = new Array<Vehicle | null>(total).fill(null)
+        const record = this.supplement[index]
 
-const failures = new Map<string, number>()
+        if (!record) return
 
-let stopLive = false
+        if (options?.signal?.aborted) throw new FipeError('aborted', 'Requisição cancelada.')
 
-let done = 0
+        let vehicle: Vehicle | null = null
 
-let cursor = 0
+        if (!stopLive) {
+          try {
+            const price = await this.client.getPrice(
+              record.fipeBrandId,
 
-let userMessage: string | null = null
+              record.fipeModelId,
 
+              record.fipeYearId,
 
+              { signal: options?.signal, forceRefresh: options?.forceRefresh },
+            )
 
-const worker = async () => {
+            if (price.fipeCode !== record.fipeCode) {
+              throw new FipeError(
+                'invalid_response',
 
-for (;;) {
+                `Código FIPE divergente (esperado ${record.fipeCode}, recebido ${price.fipeCode}).`,
+              )
+            }
 
-const index = cursor
+            vehicle = mergeVehicle(record, price, 'fipe_online')
+          } catch (error) {
+            if (isFipeError(error)) {
+              if (error.kind === 'aborted') throw error
 
-cursor += 1
+              failures.set(error.kind, (failures.get(error.kind) ?? 0) + 1)
 
-const record = this.supplement[index]
+              userMessage ??= error.userMessage
 
-if (!record) return
+              if (error.kind === 'rate_limit') stopLive = true
+            } else {
+              throw error
+            }
+          }
+        }
 
-if (options?.signal?.aborted) throw new FipeError('aborted', 'Requisição cancelada.')
+        if (!vehicle) {
+          const saved = snapshotIndex.get(
+            snapshotKey(record.fipeBrandId, record.fipeModelId, record.fipeYearId),
+          )
 
+          if (saved) vehicle = mergeVehicle(record, saved, 'fipe_referencia_salva')
+        }
 
+        results[index] = vehicle
 
-let vehicle: Vehicle | null = null
+        done += 1
 
-if (!stopLive) {
+        options?.onProgress?.(done, total)
+      }
+    }
 
-try {
+    const workers = Array.from({ length: Math.max(1, Math.min(this.concurrency, total)) }, worker)
 
-const price = await this.client.getPrice(
+    await Promise.all(workers)
 
-record.fipeBrandId,
+    const vehicles = results.filter((vehicle): vehicle is Vehicle => vehicle !== null)
 
-record.fipeModelId,
+    const warnings: string[] = []
 
-record.fipeYearId,
+    const failedCount = [...failures.values()].reduce((sum, value) => sum + value, 0)
 
-{ signal: options?.signal, forceRefresh: options?.forceRefresh },
+    if (failedCount > 0) {
+      warnings.push(
+        `${userMessage ?? 'Houve falha na consulta à tabela FIPE.'} ${failedCount} de ${total} veículos usam a referência FIPE salva.`,
+      )
+    }
 
-)
+    return buildCatalog({
+      vehicles,
 
-if (price.fipeCode !== record.fipeCode) {
+      sourceLabel: this.label,
 
-throw new FipeError(
+      versionTag: failedCount > 0 ? 'fipe-parcial' : 'fipe',
 
-'invalid_response',
+      warnings,
 
-`Código FIPE divergente (esperado ${record.fipeCode}, recebido ${price.fipeCode}).`,
-
-)
-
-}
-
-vehicle = mergeVehicle(record, price, 'fipe_online')
-
-} catch (error) {
-
-if (isFipeError(error)) {
-
-if (error.kind === 'aborted') throw error
-
-failures.set(error.kind, (failures.get(error.kind) ?? 0) + 1)
-
-userMessage ??= error.userMessage
-
-if (error.kind === 'rate_limit') stopLive = true
-
-} else {
-
-throw error
-
-}
-
-}
-
-}
-
-
-
-if (!vehicle) {
-
-const saved = snapshotIndex.get(
-
-snapshotKey(record.fipeBrandId, record.fipeModelId, record.fipeYearId),
-
-)
-
-if (saved) vehicle = mergeVehicle(record, saved, 'fipe_referencia_salva')
-
-}
-
-
-
-results[index] = vehicle
-
-done += 1
-
-options?.onProgress?.(done, total)
-
-}
-
-}
-
-
-
-const workers = Array.from({ length: Math.max(1, Math.min(this.concurrency, total)) }, worker)
-
-await Promise.all(workers)
-
-
-
-const vehicles = results.filter((vehicle): vehicle is Vehicle => vehicle !== null)
-
-const warnings: string[] = []
-
-const failedCount = [...failures.values()].reduce((sum, value) => sum + value, 0)
-
-if (failedCount > 0) {
-
-warnings.push(
-
-`${userMessage ?? 'Houve falha na consulta à tabela FIPE.'} ${failedCount} de ${total} veículos usam a referência FIPE salva.`,
-
-)
-
-}
-
-
-
-return buildCatalog({
-
-vehicles,
-
-sourceLabel: this.label,
-
-versionTag: failedCount > 0 ? 'fipe-parcial' : 'fipe',
-
-warnings,
-
-retryable: failedCount > 0,
-
-})
-
-}
-
+      retryable: failedCount > 0,
+    })
+  }
 }

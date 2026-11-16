@@ -4,32 +4,22 @@ import type { VehicleImageProvider } from '../../../services/images/types'
 
 import { VehicleImagesContext, type VehicleImagesValue } from './imagesContext'
 
-
-
 interface VehicleImagesProviderProps {
+  /** `null` desativa as fotos (testes, ambientes sem rede). */
 
-/** `null` desativa as fotos (testes, ambientes sem rede). */
+  provider: VehicleImageProvider | null
 
-provider: VehicleImageProvider | null
-
-children: ReactNode
-
+  children: ReactNode
 }
 
-
-
 export function VehicleImagesProvider({ provider, children }: VehicleImagesProviderProps) {
+  const [enabled, setEnabled] = useState(true)
 
-const [enabled, setEnabled] = useState(true)
+  const value = useMemo<VehicleImagesValue>(
+    () => ({ available: provider !== null, enabled, setEnabled, provider }),
 
-const value = useMemo<VehicleImagesValue>(
+    [provider, enabled],
+  )
 
-() => ({ available: provider !== null, enabled, setEnabled, provider }),
-
-[provider, enabled],
-
-)
-
-return <VehicleImagesContext.Provider value={value}>{children}</VehicleImagesContext.Provider>
-
+  return <VehicleImagesContext.Provider value={value}>{children}</VehicleImagesContext.Provider>
 }

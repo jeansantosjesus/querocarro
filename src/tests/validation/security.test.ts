@@ -16,8 +16,6 @@ import { makeInput } from '../fixtures/factories'
 
 import { readRepoFile } from './repoFiles'
 
-
-
 const envExample = readRepoFile('.env.example')
 
 const gitignore = readRepoFile('.gitignore')
@@ -26,298 +24,187 @@ const rlsSql = readRepoFile('supabase/migrations/0002_rls.sql')
 
 const functionsSql = readRepoFile('supabase/migrations/0003_functions.sql')
 
-
-
 /** Código-fonte de src/ (sem testes), indexado pelo caminho a partir da raiz. */
 
 const SOURCE_FILES = import.meta.glob('/src/**/*.{ts,tsx}', {
+  query: '?raw',
 
-query: '?raw',
+  import: 'default',
 
-import: 'default',
-
-eager: true,
-
+  eager: true,
 }) as Record<string, string>
 
-
-
 function productionSource(): Array<{ path: string; text: string }> {
+  return Object.entries(SOURCE_FILES)
 
-return Object.entries(SOURCE_FILES)
+    .filter(([path]) => !/\.(test|spec)\.(ts|tsx)$/.test(path))
 
-.filter(([path]) => !/\.(test|spec)\.(ts|tsx)$/.test(path))
+    .filter(([path]) => !path.startsWith('/src/tests/'))
 
-.filter(([path]) => !path.startsWith('/src/tests/'))
-
-.map(([path, text]) => ({ path: path.slice(1), text }))
-
+    .map(([path, text]) => ({ path: path.slice(1), text }))
 }
-
-
 
 describe('banco: RLS e privilégios (SQL estático)', () => {
+  const TABLES = ['profiles', 'user_preferences', 'simulations', 'simulation_results']
 
-const TABLES = ['profiles', 'user_preferences', 'simulations', 'simulation_results']
+  it('RLS ativo e forçado em todas as tabelas do usuário', () => {
+    for (const table of TABLES) {
+      expect(rlsSql).toMatch(new RegExp(`alter table public\\.${table} enable row level security`))
 
+      expect(rlsSql).toMatch(new RegExp(`alter table public\\.${table} force row level security`))
+    }
+  })
 
+  it('anon não recebe nenhum privilégio nas tabelas', () => {
+    expect(rlsSql).toMatch(/revoke all on[^;]*from anon;/)
 
-it('RLS ativo e forçado em todas as tabelas do usuário', () => {
+    for (const table of TABLES) {
+      expect(rlsSql).toMatch(new RegExp(`revoke all on[^;]*public\\.${table}[^;]*from anon`))
+    }
+  })
 
-for (const table of TABLES) {
+  it('cada política é para authenticated e limitada ao próprio usuário (auth.uid())', () => {
+    const policies = rlsSql.split(';').filter((statement) => /create policy/i.test(statement))
 
-expect(rlsSql).toMatch(new RegExp(`alter table public\\.${table} enable row level security`))
+    // profiles 4, user_preferences 4, simulations 3 (sem update), simulation_results 3.
 
-expect(rlsSql).toMatch(new RegExp(`alter table public\\.${table} force row level security`))
+    expect(policies.length).toBe(14)
 
-}
+    for (const policy of policies) {
+      expect(policy, policy.trim()).toMatch(/to authenticated/)
 
+      expect(policy, policy.trim()).toMatch(/auth\.uid\(\)/)
+    }
+  })
+
+  it('nenhuma política aberta (using true / with check true)', () => {
+    expect(rlsSql).not.toMatch(/using\s*\(\s*true\s*\)/i)
+
+    expect(rlsSql).not.toMatch(/with check\s*\(\s*true\s*\)/i)
+  })
+
+  it('simulações salvas não têm política de UPDATE (histórico imutável)', () => {
+    expect(rlsSql).not.toMatch(/create policy simulations_update/i)
+
+    expect(rlsSql).not.toMatch(/grant[^;]*update[^;]*public\.simulations/i)
+  })
+
+  it('funções SECURITY DEFINER têm search_path vazio', () => {
+    // Só código: comentários SQL (--) podem mencionar SECURITY DEFINER sem serem funções.
+
+    const code = functionsSql.replace(/^\s*--.*$/gm, '')
+
+    const occurrences = code.match(/security definer/gi) ?? []
+
+    expect(occurrences.length).toBeGreaterThan(0)
+
+    const withEmptyPath = code.match(/security definer\s+set search_path = ''/gi) ?? []
+
+    expect(withEmptyPath.length).toBe(occurrences.length)
+  })
 })
-
-
-
-it('anon não recebe nenhum privilégio nas tabelas', () => {
-
-expect(rlsSql).toMatch(/revoke all on[^;]*from anon;/)
-
-for (const table of TABLES) {
-
-expect(rlsSql).toMatch(new RegExp(`revoke all on[^;]*public\\.${table}[^;]*from anon`))
-
-}
-
-})
-
-
-
-it('cada política é para authenticated e limitada ao próprio usuário (auth.uid())', () => {
-
-const policies = rlsSql.split(';').filter((statement) => /create policy/i.test(statement))
-
-// profiles 4, user_preferences 4, simulations 3 (sem update), simulation_results 3.
-
-expect(policies.length).toBe(14)
-
-for (const policy of policies) {
-
-expect(policy, policy.trim()).toMatch(/to authenticated/)
-
-expect(policy, policy.trim()).toMatch(/auth\.uid\(\)/)
-
-}
-
-})
-
-
-
-it('nenhuma política aberta (using true / with check true)', () => {
-
-expect(rlsSql).not.toMatch(/using\s*\(\s*true\s*\)/i)
-
-expect(rlsSql).not.toMatch(/with check\s*\(\s*true\s*\)/i)
-
-})
-
-
-
-it('simulações salvas não têm política de UPDATE (histórico imutável)', () => {
-
-expect(rlsSql).not.toMatch(/create policy simulations_update/i)
-
-expect(rlsSql).not.toMatch(/grant[^;]*update[^;]*public\.simulations/i)
-
-})
-
-
-
-it('funções SECURITY DEFINER têm search_path vazio', () => {
-
-// Só código: comentários SQL (--) podem mencionar SECURITY DEFINER sem serem funções.
-
-const code = functionsSql.replace(/^\s*--.*$/gm, '')
-
-const occurrences = code.match(/security definer/gi) ?? []
-
-expect(occurrences.length).toBeGreaterThan(0)
-
-const withEmptyPath = code.match(/security definer\s+set search_path = ''/gi) ?? []
-
-expect(withEmptyPath.length).toBe(occurrences.length)
-
-})
-
-})
-
-
 
 describe('segredos e chaves no frontend', () => {
+  const sources = productionSource()
 
-const sources = productionSource()
+  it('nenhum código de produção contém chave privada (service_role ou sb_secret_)', () => {
+    for (const { path, text } of sources) {
+      // src/config/env.ts contém os padrões para REJEITAR chaves privadas: é o único lugar permitido.
 
+      if (path === 'src/config/env.ts') continue
 
+      expect(text, path).not.toMatch(/service_role|sb_secret_|SERVICE_ROLE/)
+    }
+  })
 
-it('nenhum código de produção contém chave privada (service_role ou sb_secret_)', () => {
+  it('o arquivo de exemplo de ambiente só lista variáveis públicas', () => {
+    const keys = envExample
 
-for (const { path, text } of sources) {
+      .split(/\r?\n/)
 
-// src/config/env.ts contém os padrões para REJEITAR chaves privadas: é o único lugar permitido.
+      .filter((line) => line.trim() && !line.trim().startsWith('#'))
 
-if (path === 'src/config/env.ts') continue
+      .map((line) => line.split('=')[0]?.trim())
 
-expect(text, path).not.toMatch(/service_role|sb_secret_|SERVICE_ROLE/)
+    expect(keys).toEqual(['VITE_SUPABASE_URL', 'VITE_SUPABASE_ANON_KEY'])
+  })
 
-}
-
+  it('.env.local não é versionado (regra no .gitignore)', () => {
+    expect(gitignore).toMatch(/^\.env\.\*$/m)
+  })
 })
-
-
-
-it('o arquivo de exemplo de ambiente só lista variáveis públicas', () => {
-
-const keys = envExample
-
-.split(/\r?\n/)
-
-.filter((line) => line.trim() && !line.trim().startsWith('#'))
-
-.map((line) => line.split('=')[0]?.trim())
-
-expect(keys).toEqual(['VITE_SUPABASE_URL', 'VITE_SUPABASE_ANON_KEY'])
-
-})
-
-
-
-it('.env.local não é versionado (regra no .gitignore)', () => {
-
-expect(gitignore).toMatch(/^\.env\.\*$/m)
-
-})
-
-})
-
-
 
 describe('código de produção: injeção e logs', () => {
+  const sources = productionSource()
 
-const sources = productionSource()
+  it('nenhum uso de HTML bruto ou execução dinâmica', () => {
+    for (const { path, text } of sources) {
+      expect(text, path).not.toMatch(
+        /dangerouslySetInnerHTML|\.innerHTML\s*=|\beval\(|new Function\(/,
+      )
+    }
+  })
 
-
-
-it('nenhum uso de HTML bruto ou execução dinâmica', () => {
-
-for (const { path, text } of sources) {
-
-expect(text, path).not.toMatch(
-
-/dangerouslySetInnerHTML|\.innerHTML\s*=|\beval\(|new Function\(/,
-
-)
-
-}
-
+  it('nenhum log de depuração em produção (console.log, info, debug)', () => {
+    for (const { path, text } of sources) {
+      expect(text, path).not.toMatch(/console\.(log|info|debug)\(/)
+    }
+  })
 })
-
-
-
-it('nenhum log de depuração em produção (console.log, info, debug)', () => {
-
-for (const { path, text } of sources) {
-
-expect(text, path).not.toMatch(/console\.(log|info|debug)\(/)
-
-}
-
-})
-
-})
-
-
 
 describe('persistência no navegador', () => {
+  it('só estes arquivos gravam em storage: cache FIPE, sessão do Supabase e flag de demonstração', () => {
+    const writers = productionSource()
+      .filter(({ text }) => /\.setItem\(/.test(text))
 
-it('só estes arquivos gravam em storage: cache FIPE, sessão do Supabase e flag de demonstração', () => {
+      .map(({ path }) => path)
 
-const writers = productionSource()
+      .sort()
 
-.filter(({ text }) => /\.setItem\(/.test(text))
+    expect(writers).toEqual([
+      'src/features/auth/AuthContext.tsx',
 
-.map(({ path }) => path)
+      'src/services/fipe/cache.ts',
 
-.sort()
+      'src/services/supabase/client.ts',
+    ])
+  })
 
-expect(writers).toEqual([
+  it('renda e despesas não são gravadas em storage pelo contexto da simulação', () => {
+    const context = SOURCE_FILES['/src/features/simulation/SimulationContext.tsx']
 
-'src/features/auth/AuthContext.tsx',
+    expect(context).toBeDefined()
 
-'src/services/fipe/cache.ts',
+    // Só código: a documentação do arquivo pode mencionar o storage para explicar que não o usa.
 
-'src/services/supabase/client.ts',
+    const code = (context ?? '').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
 
-])
-
+    expect(code).not.toMatch(/setItem|localStorage|sessionStorage/)
+  })
 })
-
-
-
-it('renda e despesas não são gravadas em storage pelo contexto da simulação', () => {
-
-const context = SOURCE_FILES['/src/features/simulation/SimulationContext.tsx']
-
-expect(context).toBeDefined()
-
-// Só código: a documentação do arquivo pode mencionar o storage para explicar que não o usa.
-
-const code = (context ?? '').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
-
-expect(code).not.toMatch(/setItem|localStorage|sessionStorage/)
-
-})
-
-})
-
-
 
 describe('validação de entrada (schema da simulação)', () => {
+  it('a entrada de demonstração é aceita (controle positivo)', () => {
+    expect(simulationInputSchema.safeParse(makeInput()).success).toBe(true)
+  })
 
-it('a entrada de demonstração é aceita (controle positivo)', () => {
+  it('renda negativa é rejeitada', () => {
+    const result = simulationInputSchema.safeParse(makeInput({ finance: { netIncome: -1 } }))
 
-expect(simulationInputSchema.safeParse(makeInput()).success).toBe(true)
+    expect(result.success).toBe(false)
+  })
 
-})
+  it('entrada negativa é rejeitada', () => {
+    const result = simulationInputSchema.safeParse(makeInput({ finance: { downPayment: -500 } }))
 
+    expect(result.success).toBe(false)
+  })
 
+  it('taxa de juros não numérica (NaN) é rejeitada', () => {
+    const result = simulationInputSchema.safeParse(
+      makeInput({ finance: { monthlyRatePct: Number.NaN } }),
+    )
 
-it('renda negativa é rejeitada', () => {
-
-const result = simulationInputSchema.safeParse(makeInput({ finance: { netIncome: -1 } }))
-
-expect(result.success).toBe(false)
-
-})
-
-
-
-it('entrada negativa é rejeitada', () => {
-
-const result = simulationInputSchema.safeParse(makeInput({ finance: { downPayment: -500 } }))
-
-expect(result.success).toBe(false)
-
-})
-
-
-
-it('taxa de juros não numérica (NaN) é rejeitada', () => {
-
-const result = simulationInputSchema.safeParse(
-
-makeInput({ finance: { monthlyRatePct: Number.NaN } }),
-
-)
-
-expect(result.success).toBe(false)
-
-})
-
+    expect(result.success).toBe(false)
+  })
 })

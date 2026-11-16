@@ -1,13 +1,8 @@
 import {
-
-DEFAULT_TCO_HORIZON,
-
-EXTRA_COST_LABELS,
-
-TCO_HORIZONS,
-
-type TcoHorizon,
-
+  DEFAULT_TCO_HORIZON,
+  EXTRA_COST_LABELS,
+  TCO_HORIZONS,
+  type TcoHorizon,
 } from '../../config/tco'
 
 import type { FinanceInput, UsageInput } from '../../schemas/simulation'
@@ -15,21 +10,13 @@ import type { FinanceInput, UsageInput } from '../../schemas/simulation'
 import type { VehicleCosts } from '../../types/decision'
 
 import type {
-
-AmortizationSystem,
-
-ExtraCostId,
-
-ExtraCosts,
-
-ScheduleRow,
-
-TcoInput,
-
-TcoResult,
-
-VehicleTco,
-
+  AmortizationSystem,
+  ExtraCostId,
+  ExtraCosts,
+  ScheduleRow,
+  TcoInput,
+  TcoResult,
+  VehicleTco,
 } from '../../types/tco'
 
 import type { Vehicle } from '../../types/vehicle'
@@ -38,33 +25,23 @@ import { maintenanceAgeFactor } from './costs'
 
 import { FinanceInputError, calculateMonthlyPayment } from './loan'
 
-
-
 const EXTRA_ORDER: readonly ExtraCostId[] = [
+  'documentation',
 
-'documentation',
+  'transfer',
 
-'transfer',
+  'parking',
 
-'parking',
+  'cleaning',
 
-'cleaning',
+  'tolls',
 
-'tolls',
-
-'options',
-
+  'options',
 ]
 
-
-
 export function isTcoHorizon(value: number): value is TcoHorizon {
-
-return (TCO_HORIZONS as readonly number[]).includes(value)
-
+  return (TCO_HORIZONS as readonly number[]).includes(value)
 }
-
-
 
 /**
 
@@ -83,86 +60,68 @@ return (TCO_HORIZONS as readonly number[]).includes(value)
 */
 
 export function buildSchedule(
+  system: AmortizationSystem,
 
-system: AmortizationSystem,
+  principal: number,
 
-principal: number,
+  monthlyRatePct: number,
 
-monthlyRatePct: number,
-
-installments: number,
-
+  installments: number,
 ): ScheduleRow[] {
+  // Reaproveita a validação da Price (principal, taxa e parcelas).
 
-// Reaproveita a validação da Price (principal, taxa e parcelas).
+  const pmt = calculateMonthlyPayment(principal, monthlyRatePct, installments)
 
-const pmt = calculateMonthlyPayment(principal, monthlyRatePct, installments)
+  const rate = monthlyRatePct / 100
 
-const rate = monthlyRatePct / 100
+  const sacAmortization = principal / installments
 
-const sacAmortization = principal / installments
+  const rows: ScheduleRow[] = []
 
+  let opening = principal
 
+  for (let period = 1; period <= installments; period += 1) {
+    const interest = opening * rate
 
-const rows: ScheduleRow[] = []
+    const amortization = system === 'price' ? pmt - interest : sacAmortization
 
-let opening = principal
+    const installment = amortization + interest
 
-for (let period = 1; period <= installments; period += 1) {
+    const closing = opening - amortization
 
-const interest = opening * rate
+    rows.push({ period, opening, interest, amortization, installment, closing })
 
-const amortization = system === 'price' ? pmt - interest : sacAmortization
+    opening = closing
+  }
 
-const installment = amortization + interest
-
-const closing = opening - amortization
-
-rows.push({ period, opening, interest, amortization, installment, closing })
-
-opening = closing
-
+  return rows
 }
-
-return rows
-
-}
-
-
 
 /** Juros, parcelas pagas e saldo devedor até `months` (sem ultrapassar o prazo). */
 
 export function summarizeScheduleUpTo(
+  rows: readonly ScheduleRow[],
 
-rows: readonly ScheduleRow[],
-
-months: number,
-
+  months: number,
 ): { interest: number; installments: number; balance: number } {
+  let interest = 0
 
-let interest = 0
+  let installments = 0
 
-let installments = 0
+  for (const row of rows) {
+    if (row.period > months) break
 
-for (const row of rows) {
+    interest += row.interest
 
-if (row.period > months) break
+    installments += row.installment
+  }
 
-interest += row.interest
+  const last = rows[Math.min(months, rows.length) - 1]
 
-installments += row.installment
+  const balance = last && months < rows.length ? Math.max(last.closing, 0) : 0
 
+  return { interest, installments, balance }
 }
-
-const last = rows[Math.min(months, rows.length) - 1]
-
-const balance = last && months < rows.length ? Math.max(last.closing, 0) : 0
-
-return { interest, installments, balance }
-
-}
-
-
 
 /**
 
@@ -173,106 +132,75 @@ return { interest, installments, balance }
 */
 
 export function residualValue(
+  priceBRL: number,
 
-priceBRL: number,
+  depreciationAnnualPct: number | null,
 
-depreciationAnnualPct: number | null,
-
-months: number,
-
+  months: number,
 ): { value: number | null; capped: boolean } {
+  if (
+    depreciationAnnualPct === null ||
+    !Number.isFinite(depreciationAnnualPct) ||
+    depreciationAnnualPct < 0 ||
+    depreciationAnnualPct > 100
+  ) {
+    return { value: null, capped: false }
+  }
 
-if (
+  const raw = priceBRL * (1 - (depreciationAnnualPct / 100) * (months / 12))
 
-depreciationAnnualPct === null ||
-
-!Number.isFinite(depreciationAnnualPct) ||
-
-depreciationAnnualPct < 0 ||
-
-depreciationAnnualPct > 100
-
-) {
-
-return { value: null, capped: false }
-
+  return { value: Math.max(raw, 0), capped: raw < 0 }
 }
-
-const raw = priceBRL * (1 - (depreciationAnnualPct / 100) * (months / 12))
-
-return { value: Math.max(raw, 0), capped: raw < 0 }
-
-}
-
-
 
 /** Soma da manutenção mês a mês; cada ano segue o fator de idade do próprio ano do veículo. */
 
 export function maintenanceOverHorizon(
+  annualAtStart: number,
 
-annualAtStart: number,
+  ageAtStart: number,
 
-ageAtStart: number,
+  months: number,
 
-months: number,
-
-assumptions: TcoInput['assumptions'],
-
+  assumptions: TcoInput['assumptions'],
 ): number {
+  const base = maintenanceAgeFactor(ageAtStart, assumptions)
 
-const base = maintenanceAgeFactor(ageAtStart, assumptions)
+  let total = 0
 
-let total = 0
+  for (let month = 1; month <= months; month += 1) {
+    const yearIndex = Math.ceil(month / 12) - 1
 
-for (let month = 1; month <= months; month += 1) {
+    const factor = maintenanceAgeFactor(ageAtStart + yearIndex, assumptions) / base
 
-const yearIndex = Math.ceil(month / 12) - 1
+    total += (annualAtStart * factor) / 12
+  }
 
-const factor = maintenanceAgeFactor(ageAtStart + yearIndex, assumptions) / base
-
-total += (annualAtStart * factor) / 12
-
+  return total
 }
-
-return total
-
-}
-
-
 
 function extrasTotal(extras: ExtraCosts, months: number): { total: number; notIncluded: string[] } {
+  let total = 0
 
-let total = 0
+  const notIncluded: string[] = []
 
-const notIncluded: string[] = []
+  for (const id of EXTRA_ORDER) {
+    const item = extras[id]
 
-for (const id of EXTRA_ORDER) {
+    if (item === undefined || item === null) {
+      notIncluded.push(EXTRA_COST_LABELS[id])
 
-const item = extras[id]
+      continue
+    }
 
-if (item === undefined || item === null) {
+    if (!Number.isFinite(item.amount) || item.amount < 0) {
+      throw new FinanceInputError(`${EXTRA_COST_LABELS[id]}: valor deve ser maior ou igual a zero.`)
+    }
 
-notIncluded.push(EXTRA_COST_LABELS[id])
+    total += item.periodicity === 'mensal' ? item.amount * months : item.amount
+  }
 
-continue
-
+  return { total, notIncluded }
 }
-
-if (!Number.isFinite(item.amount) || item.amount < 0) {
-
-throw new FinanceInputError(`${EXTRA_COST_LABELS[id]}: valor deve ser maior ou igual a zero.`)
-
-}
-
-total += item.periodicity === 'mensal' ? item.amount * months : item.amount
-
-}
-
-return { total, notIncluded }
-
-}
-
-
 
 /**
 
@@ -283,64 +211,56 @@ return { total, notIncluded }
 */
 
 export function buildTcoInput(args: {
+  vehicle: Pick<Vehicle, 'modelYear' | 'depreciationAnnualPct'>
 
-vehicle: Pick<Vehicle, 'modelYear' | 'depreciationAnnualPct'>
+  costs: VehicleCosts
 
-costs: VehicleCosts
+  finance: FinanceInput
 
-finance: FinanceInput
+  usage: UsageInput
 
-usage: UsageInput
+  purchaseMode: 'avista' | 'financiado'
 
-purchaseMode: 'avista' | 'financiado'
+  assumptions: TcoInput['assumptions']
 
-assumptions: TcoInput['assumptions']
+  referenceYear: number
 
-referenceYear: number
-
-extras?: ExtraCosts
-
+  extras?: ExtraCosts
 }): TcoInput {
+  const { vehicle, costs, finance, purchaseMode, assumptions, referenceYear } = args
 
-const { vehicle, costs, finance, purchaseMode, assumptions, referenceYear } = args
+  return {
+    priceBRL: costs.priceBRL,
 
-return {
+    purchaseMode,
 
-priceBRL: costs.priceBRL,
+    downPayment: finance.downPayment,
 
-purchaseMode,
+    monthlyRatePct: finance.monthlyRatePct,
 
-downPayment: finance.downPayment,
+    installments: finance.installments,
 
-monthlyRatePct: finance.monthlyRatePct,
+    ipvaAnnual: costs.ipvaAnnual,
 
-installments: finance.installments,
+    licensingAnnual: costs.licensingAnnual,
 
-ipvaAnnual: costs.ipvaAnnual,
+    insuranceAnnual: costs.insuranceAnnual,
 
-licensingAnnual: costs.licensingAnnual,
+    maintenanceAnnualAtStart: costs.maintenanceAnnual,
 
-insuranceAnnual: costs.insuranceAnnual,
+    ageAtStart: Math.max(referenceYear - vehicle.modelYear, 0),
 
-maintenanceAnnualAtStart: costs.maintenanceAnnual,
+    energyCostPerKm: costs.energyCostPerKm,
 
-ageAtStart: Math.max(referenceYear - vehicle.modelYear, 0),
+    monthlyKm: costs.monthlyKm,
 
-energyCostPerKm: costs.energyCostPerKm,
+    depreciationAnnualPct: vehicle.depreciationAnnualPct,
 
-monthlyKm: costs.monthlyKm,
+    extras: args.extras ?? {},
 
-depreciationAnnualPct: vehicle.depreciationAnnualPct,
-
-extras: args.extras ?? {},
-
-assumptions,
-
+    assumptions,
+  }
 }
-
-}
-
-
 
 /**
 
@@ -361,238 +281,173 @@ assumptions,
 */
 
 export function calculateTco(
+  input: TcoInput,
 
-input: TcoInput,
+  horizonMonths: TcoHorizon,
 
-horizonMonths: TcoHorizon,
-
-system: AmortizationSystem,
-
+  system: AmortizationSystem,
 ): TcoResult {
+  if (!isTcoHorizon(horizonMonths)) {
+    throw new FinanceInputError('Horizonte inválido: use 12, 24, 36, 48 ou 60 meses.')
+  }
 
-if (!isTcoHorizon(horizonMonths)) {
+  if (!Number.isFinite(input.priceBRL) || input.priceBRL <= 0) {
+    throw new FinanceInputError('Preço de referência deve ser positivo.')
+  }
 
-throw new FinanceInputError('Horizonte inválido: use 12, 24, 36, 48 ou 60 meses.')
+  const downPaymentUsed = Math.min(Math.max(input.downPayment, 0), input.priceBRL)
 
+  const financed = input.purchaseMode === 'avista' ? 0 : input.priceBRL - downPaymentUsed
+
+  const entry = input.purchaseMode === 'avista' ? input.priceBRL : downPaymentUsed
+
+  const schedule =
+    input.purchaseMode === 'avista'
+      ? []
+      : buildSchedule(system, financed, input.monthlyRatePct, input.installments)
+
+  const debt = summarizeScheduleUpTo(schedule, horizonMonths)
+
+  const residual = residualValue(input.priceBRL, input.depreciationAnnualPct, horizonMonths)
+
+  const taxes =
+    input.ipvaAnnual === null
+      ? null
+      : ((input.ipvaAnnual + input.licensingAnnual) / 12) * horizonMonths
+
+  const insurance =
+    input.insuranceAnnual === null ? null : (input.insuranceAnnual / 12) * horizonMonths
+
+  const energy =
+    input.energyCostPerKm === null ? null : input.energyCostPerKm * input.monthlyKm * horizonMonths
+
+  const maintenance =
+    input.maintenanceAnnualAtStart === null
+      ? null
+      : maintenanceOverHorizon(
+          input.maintenanceAnnualAtStart,
+
+          input.ageAtStart,
+
+          horizonMonths,
+
+          input.assumptions,
+        )
+
+  const extras = extrasTotal(input.extras, horizonMonths)
+  const missing: string[] = []
+
+  if (taxes === null) missing.push('IPVA')
+
+  if (residual.value === null) missing.push('Depreciação (valor residual)')
+
+  if (insurance === null) missing.push('Seguro')
+
+  if (maintenance === null) missing.push('Manutenção')
+
+  if (energy === null) missing.push('Combustível ou energia')
+
+  const complete = missing.length === 0
+
+  const residualValueOrNull = residual.value
+
+  const economicTotal =
+    complete && residualValueOrNull !== null
+      ? input.priceBRL -
+        residualValueOrNull +
+        debt.interest +
+        (taxes as number) +
+        (insurance as number) +
+        (energy as number) +
+        (maintenance as number) +
+        extras.total
+      : null
+
+  const cashTotal = complete
+    ? entry +
+      debt.installments +
+      (taxes as number) +
+      (insurance as number) +
+      (energy as number) +
+      (maintenance as number) +
+      extras.total
+    : null
+
+  return {
+    horizonMonths,
+
+    system,
+
+    economic: {
+      total: economicTotal,
+
+      acquisition: input.priceBRL,
+
+      residual: residual.value,
+
+      interest: debt.interest,
+
+      taxes,
+
+      insurance,
+
+      energy,
+
+      maintenance,
+
+      extras: extras.total,
+    },
+
+    cash: {
+      total: cashTotal,
+
+      entry,
+
+      installments: debt.installments,
+
+      taxes,
+
+      insurance,
+
+      energy,
+
+      maintenance,
+
+      extras: extras.total,
+
+      netResidualPosition: residual.value === null ? null : residual.value - debt.balance,
+    },
+
+    interestPaid: debt.interest,
+
+    balanceAtHorizon: debt.balance,
+
+    residualCapped: residual.capped,
+
+    missing,
+
+    notIncluded: extras.notIncluded,
+  }
 }
-
-if (!Number.isFinite(input.priceBRL) || input.priceBRL <= 0) {
-
-throw new FinanceInputError('Preço de referência deve ser positivo.')
-
-}
-
-
-
-const downPaymentUsed = Math.min(Math.max(input.downPayment, 0), input.priceBRL)
-
-const financed = input.purchaseMode === 'avista' ? 0 : input.priceBRL - downPaymentUsed
-
-const entry = input.purchaseMode === 'avista' ? input.priceBRL : downPaymentUsed
-
-
-
-const schedule =
-
-input.purchaseMode === 'avista'
-
-? []
-
-: buildSchedule(system, financed, input.monthlyRatePct, input.installments)
-
-const debt = summarizeScheduleUpTo(schedule, horizonMonths)
-
-
-
-const residual = residualValue(input.priceBRL, input.depreciationAnnualPct, horizonMonths)
-
-const taxes =
-
-input.ipvaAnnual === null
-
-? null
-
-: ((input.ipvaAnnual + input.licensingAnnual) / 12) * horizonMonths
-
-const insurance =
-
-input.insuranceAnnual === null ? null : (input.insuranceAnnual / 12) * horizonMonths
-
-const energy =
-
-input.energyCostPerKm === null ? null : input.energyCostPerKm * input.monthlyKm * horizonMonths
-
-const maintenance =
-
-input.maintenanceAnnualAtStart === null
-
-? null
-
-: maintenanceOverHorizon(
-
-input.maintenanceAnnualAtStart,
-
-input.ageAtStart,
-
-horizonMonths,
-
-input.assumptions,
-
-)
-
-const extras = extrasTotal(input.extras, horizonMonths)
-const missing: string[] = []
-
-if (taxes === null) missing.push('IPVA')
-
-if (residual.value === null) missing.push('Depreciação (valor residual)')
-
-if (insurance === null) missing.push('Seguro')
-
-if (maintenance === null) missing.push('Manutenção')
-
-if (energy === null) missing.push('Combustível ou energia')
-
-
-
-const complete = missing.length === 0
-
-const residualValueOrNull = residual.value
-
-const economicTotal =
-
-complete && residualValueOrNull !== null
-
-? input.priceBRL -
-
-residualValueOrNull +
-
-debt.interest +
-
-(taxes as number) +
-
-(insurance as number) +
-
-(energy as number) +
-
-(maintenance as number) +
-
-extras.total
-
-: null
-
-const cashTotal = complete
-
-? entry +
-
-debt.installments +
-
-(taxes as number) +
-
-(insurance as number) +
-
-(energy as number) +
-
-(maintenance as number) +
-
-extras.total
-
-: null
-
-
-
-return {
-
-horizonMonths,
-
-system,
-
-economic: {
-
-total: economicTotal,
-
-acquisition: input.priceBRL,
-
-residual: residual.value,
-
-interest: debt.interest,
-
-taxes,
-
-insurance,
-
-energy,
-
-maintenance,
-
-extras: extras.total,
-
-},
-
-cash: {
-
-total: cashTotal,
-
-entry,
-
-installments: debt.installments,
-
-taxes,
-
-insurance,
-
-energy,
-
-maintenance,
-
-extras: extras.total,
-
-netResidualPosition: residual.value === null ? null : residual.value - debt.balance,
-
-},
-
-interestPaid: debt.interest,
-
-balanceAtHorizon: debt.balance,
-
-residualCapped: residual.capped,
-
-missing,
-
-notIncluded: extras.notIncluded,
-
-}
-
-}
-
-
 
 /** TCO nos cinco horizontes e nos dois sistemas. O critério do ranking usa Price no horizonte padrão. */
 
 export function calculateVehicleTco(input: TcoInput): VehicleTco {
+  const byHorizon = {} as VehicleTco['byHorizon']
 
-const byHorizon = {} as VehicleTco['byHorizon']
+  for (const horizon of TCO_HORIZONS) {
+    byHorizon[horizon] = {
+      price: calculateTco(input, horizon, 'price'),
 
-for (const horizon of TCO_HORIZONS) {
+      sac: calculateTco(input, horizon, 'sac'),
+    }
+  }
 
-byHorizon[horizon] = {
+  return {
+    criterionHorizonMonths: DEFAULT_TCO_HORIZON,
 
-price: calculateTco(input, horizon, 'price'),
+    criterionValue: byHorizon[DEFAULT_TCO_HORIZON].price.economic.total,
 
-sac: calculateTco(input, horizon, 'sac'),
-
-}
-
-}
-
-return {
-
-criterionHorizonMonths: DEFAULT_TCO_HORIZON,
-
-criterionValue: byHorizon[DEFAULT_TCO_HORIZON].price.economic.total,
-
-byHorizon,
-
-}
-
+    byHorizon,
+  }
 }

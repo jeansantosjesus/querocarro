@@ -11,120 +11,84 @@ import { createDefaultFipeCache, type TtlCache } from './cache'
 import { FipeError } from './errors'
 
 import {
-
-fipeBrandsSchema,
-
-fipeModelsSchema,
-
-fipePriceResponseSchema,
-
-fipeYearsSchema,
-
-type FipeBrand,
-
+  fipeBrandsSchema,
+  fipeModelsSchema,
+  fipePriceResponseSchema,
+  fipeYearsSchema,
+  type FipeBrand,
 } from './schemas'
 
-
-
 export interface FipeClientOptions {
+  baseUrl?: string
 
-baseUrl?: string
+  fetchImpl?: typeof fetch
 
-fetchImpl?: typeof fetch
+  timeoutMs?: number
 
-timeoutMs?: number
+  maxRetries?: number
 
-maxRetries?: number
+  maxBackoffMs?: number
 
-maxBackoffMs?: number
+  baseBackoffMs?: number
 
-baseBackoffMs?: number
+  cacheTtlMs?: number
 
-cacheTtlMs?: number
+  cache?: TtlCache
 
-cache?: TtlCache
-
-sleep?: (ms: number) => Promise<void>
-
+  sleep?: (ms: number) => Promise<void>
 }
-
-
 
 export interface RequestOptions {
+  signal?: AbortSignal
 
-signal?: AbortSignal
-
-forceRefresh?: boolean
-
+  forceRefresh?: boolean
 }
-
-
 
 export interface FipeClient {
+  getBrands(options?: RequestOptions): Promise<FipeBrand[]>
 
-getBrands(options?: RequestOptions): Promise<FipeBrand[]>
+  getModels(brandId: string, options?: RequestOptions): Promise<FipeBrand[]>
 
-getModels(brandId: string, options?: RequestOptions): Promise<FipeBrand[]>
+  getYears(brandId: string, modelId: string, options?: RequestOptions): Promise<FipeBrand[]>
 
-getYears(brandId: string, modelId: string, options?: RequestOptions): Promise<FipeBrand[]>
+  getPrice(
+    brandId: string,
 
-getPrice(
+    modelId: string,
 
-brandId: string,
+    yearId: string,
 
-modelId: string,
-
-yearId: string,
-
-options?: RequestOptions,
-
-): Promise<FipePriceRecord>
-
+    options?: RequestOptions,
+  ): Promise<FipePriceRecord>
 }
-
-
 
 /** Identificadores de URL aceitos: evita manipulação de parâmetros e path traversal. */
 
 const SAFE_ID = /^[A-Za-z0-9_-]{1,32}$/
 
-
-
 function assertSafeId(label: string, value: string): string {
+  if (!SAFE_ID.test(value)) {
+    throw new FipeError('invalid_response', `Identificador inválido para ${label}.`)
+  }
 
-if (!SAFE_ID.test(value)) {
-
-throw new FipeError('invalid_response', `Identificador inválido para ${label}.`)
-
+  return encodeURIComponent(value)
 }
-
-return encodeURIComponent(value)
-
-}
-
-
 
 const defaultSleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms))
 
-
-
 function parseRetryAfter(header: string | null): number | undefined {
+  if (!header) return undefined
 
-if (!header) return undefined
+  const seconds = Number(header)
 
-const seconds = Number(header)
+  if (Number.isFinite(seconds) && seconds >= 0) return seconds * 1000
 
-if (Number.isFinite(seconds) && seconds >= 0) return seconds * 1000
+  const date = Date.parse(header)
 
-const date = Date.parse(header)
+  if (!Number.isNaN(date)) return Math.max(date - Date.now(), 0)
 
-if (!Number.isNaN(date)) return Math.max(date - Date.now(), 0)
-
-return undefined
-
+  return undefined
 }
-
-
 
 /**
 
@@ -137,263 +101,184 @@ return undefined
 */
 
 export function createFipeClient(options: FipeClientOptions = {}): FipeClient {
+  const baseUrl = (options.baseUrl ?? FIPE_CONFIG.baseUrl).replace(/\/+$/, '')
 
-const baseUrl = (options.baseUrl ?? FIPE_CONFIG.baseUrl).replace(/\/+$/, '')
+  const fetchImpl = options.fetchImpl ?? ((...args) => globalThis.fetch(...args))
 
-const fetchImpl = options.fetchImpl ?? ((...args) => globalThis.fetch(...args))
+  const timeoutMs = options.timeoutMs ?? FIPE_CONFIG.timeoutMs
 
-const timeoutMs = options.timeoutMs ?? FIPE_CONFIG.timeoutMs
+  const maxRetries = options.maxRetries ?? FIPE_CONFIG.maxRetries
 
-const maxRetries = options.maxRetries ?? FIPE_CONFIG.maxRetries
+  const maxBackoffMs = options.maxBackoffMs ?? FIPE_CONFIG.maxBackoffMs
 
-const maxBackoffMs = options.maxBackoffMs ?? FIPE_CONFIG.maxBackoffMs
+  const baseBackoffMs = options.baseBackoffMs ?? FIPE_CONFIG.baseBackoffMs
 
-const baseBackoffMs = options.baseBackoffMs ?? FIPE_CONFIG.baseBackoffMs
+  const cacheTtlMs = options.cacheTtlMs ?? FIPE_CONFIG.cacheTtlMs
 
-const cacheTtlMs = options.cacheTtlMs ?? FIPE_CONFIG.cacheTtlMs
+  const cache = options.cache ?? createDefaultFipeCache()
 
-const cache = options.cache ?? createDefaultFipeCache()
+  const sleep = options.sleep ?? defaultSleep
 
-const sleep = options.sleep ?? defaultSleep
+  async function attempt(url: string, signal: AbortSignal | undefined): Promise<unknown> {
+    const controller = new AbortController()
 
+    let timedOut = false
 
+    const timer = setTimeout(() => {
+      timedOut = true
 
-async function attempt(url: string, signal: AbortSignal | undefined): Promise<unknown> {
+      controller.abort()
+    }, timeoutMs)
 
-const controller = new AbortController()
+    const onExternalAbort = () => controller.abort()
 
-let timedOut = false
+    signal?.addEventListener('abort', onExternalAbort, { once: true })
 
-const timer = setTimeout(() => {
+    try {
+      let response: Response
 
-timedOut = true
+      try {
+        response = await fetchImpl(url, {
+          signal: controller.signal,
 
-controller.abort()
+          headers: { Accept: 'application/json' },
 
-}, timeoutMs)
+          credentials: 'omit',
+        })
+      } catch (error) {
+        if (signal?.aborted) throw new FipeError('aborted', 'Requisição cancelada.')
 
-const onExternalAbort = () => controller.abort()
+        if (timedOut) throw new FipeError('timeout', `Tempo limite de ${timeoutMs} ms excedido.`)
 
-signal?.addEventListener('abort', onExternalAbort, { once: true })
+        throw new FipeError('network', error instanceof Error ? error.message : 'Falha de rede.')
+      }
 
+      if (response.status === 429) {
+        throw new FipeError('rate_limit', 'HTTP 429', {
+          status: 429,
 
+          retryAfterMs: parseRetryAfter(response.headers.get('retry-after')),
+        })
+      }
 
-try {
+      if (!response.ok) {
+        throw new FipeError('http', `HTTP ${response.status}`, { status: response.status })
+      }
 
-let response: Response
+      try {
+        return (await response.json()) as unknown
+      } catch {
+        throw new FipeError('invalid_response', 'Corpo da resposta não é JSON válido.')
+      }
+    } finally {
+      clearTimeout(timer)
 
-try {
+      signal?.removeEventListener('abort', onExternalAbort)
+    }
+  }
 
-response = await fetchImpl(url, {
+  function isRetryable(error: FipeError): boolean {
+    if (error.kind === 'network' || error.kind === 'timeout' || error.kind === 'rate_limit')
+      return true
 
-signal: controller.signal,
+    return error.kind === 'http' && (error.status ?? 0) >= 500
+  }
 
-headers: { Accept: 'application/json' },
+  async function requestJson<T extends z.ZodType>(
+    path: string,
 
-credentials: 'omit',
+    schema: T,
 
-})
+    requestOptions: RequestOptions | undefined,
+  ): Promise<z.infer<T>> {
+    if (!requestOptions?.forceRefresh) {
+      const cached = cache.get(path)
 
-} catch (error) {
+      if (cached !== undefined) {
+        const parsed = schema.safeParse(cached)
 
-if (signal?.aborted) throw new FipeError('aborted', 'Requisição cancelada.')
+        if (parsed.success) return parsed.data
 
-if (timedOut) throw new FipeError('timeout', `Tempo limite de ${timeoutMs} ms excedido.`)
+        cache.delete(path) // cache corrompido ou de outra versão
+      }
+    }
 
-throw new FipeError('network', error instanceof Error ? error.message : 'Falha de rede.')
+    const url = `${baseUrl}${path}`
 
-}
+    let lastError: FipeError | undefined
 
+    for (let tryNumber = 0; tryNumber <= maxRetries; tryNumber += 1) {
+      if (requestOptions?.signal?.aborted) throw new FipeError('aborted', 'Requisição cancelada.')
 
+      try {
+        const body = await attempt(url, requestOptions?.signal)
 
-if (response.status === 429) {
+        const parsed = schema.safeParse(body)
 
-throw new FipeError('rate_limit', 'HTTP 429', {
+        if (!parsed.success) {
+          throw new FipeError('invalid_response', 'Resposta fora do formato esperado.')
+        }
 
-status: 429,
+        cache.set(path, parsed.data, cacheTtlMs)
 
-retryAfterMs: parseRetryAfter(response.headers.get('retry-after')),
+        return parsed.data
+      } catch (error) {
+        const fipeError =
+          error instanceof FipeError
+            ? error
+            : new FipeError(
+                'network',
 
-})
+                error instanceof Error ? error.message : 'Falha desconhecida.',
+              )
 
-}
+        lastError = fipeError
 
-if (!response.ok) {
+        if (!isRetryable(fipeError) || tryNumber === maxRetries) break
 
-throw new FipeError('http', `HTTP ${response.status}`, { status: response.status })
+        const exponential = baseBackoffMs * 2 ** tryNumber
 
-}
+        const wait =
+          fipeError.kind === 'rate_limit' ? (fipeError.retryAfterMs ?? exponential) : exponential
 
-try {
+        // Se a espera exigida for longa demais, desiste e deixa a interface orientar o usuário.
 
-return (await response.json()) as unknown
+        if (wait > maxBackoffMs) break
 
-} catch {
+        await sleep(wait)
+      }
+    }
 
-throw new FipeError('invalid_response', 'Corpo da resposta não é JSON válido.')
+    throw lastError ?? new FipeError('network', 'Falha desconhecida.')
+  }
 
-}
+  // Métodos async: identificadores inválidos viram Promise rejeitada (nunca exceção síncrona).
 
-} finally {
+  return {
+    getBrands: async (opts) => requestJson('/cars/brands', fipeBrandsSchema, opts),
 
-clearTimeout(timer)
+    getModels: async (brandId, opts) =>
+      requestJson(`/cars/brands/${assertSafeId('marca', brandId)}/models`, fipeModelsSchema, opts),
 
-signal?.removeEventListener('abort', onExternalAbort)
+    getYears: async (brandId, modelId, opts) =>
+      requestJson(
+        `/cars/brands/${assertSafeId('marca', brandId)}/models/${assertSafeId('modelo', modelId)}/years`,
 
-}
+        fipeYearsSchema,
 
-}
+        opts,
+      ),
 
+    getPrice: async (brandId, modelId, yearId, opts) => {
+      const body = await requestJson(
+        `/cars/brands/${assertSafeId('marca', brandId)}/models/${assertSafeId('modelo', modelId)}/years/${assertSafeId('ano', yearId)}`,
 
+        fipePriceResponseSchema,
 
-function isRetryable(error: FipeError): boolean {
+        opts,
+      )
 
-if (error.kind === 'network' || error.kind === 'timeout' || error.kind === 'rate_limit')
-
-return true
-
-return error.kind === 'http' && (error.status ?? 0) >= 500
-
-}
-
-
-
-async function requestJson<T extends z.ZodType>(
-
-path: string,
-
-schema: T,
-
-requestOptions: RequestOptions | undefined,
-
-): Promise<z.infer<T>> {
-
-if (!requestOptions?.forceRefresh) {
-
-const cached = cache.get(path)
-
-if (cached !== undefined) {
-
-const parsed = schema.safeParse(cached)
-
-if (parsed.success) return parsed.data
-
-cache.delete(path) // cache corrompido ou de outra versão
-
-}
-
-}
-
-
-
-const url = `${baseUrl}${path}`
-
-let lastError: FipeError | undefined
-
-
-
-for (let tryNumber = 0; tryNumber <= maxRetries; tryNumber += 1) {
-
-if (requestOptions?.signal?.aborted) throw new FipeError('aborted', 'Requisição cancelada.')
-
-try {
-
-const body = await attempt(url, requestOptions?.signal)
-
-const parsed = schema.safeParse(body)
-
-if (!parsed.success) {
-
-throw new FipeError('invalid_response', 'Resposta fora do formato esperado.')
-
-}
-
-cache.set(path, parsed.data, cacheTtlMs)
-
-return parsed.data
-
-} catch (error) {
-
-const fipeError =
-
-error instanceof FipeError
-
-? error
-
-: new FipeError(
-
-'network',
-
-error instanceof Error ? error.message : 'Falha desconhecida.',
-
-)
-
-lastError = fipeError
-
-if (!isRetryable(fipeError) || tryNumber === maxRetries) break
-
-
-
-const exponential = baseBackoffMs * 2 ** tryNumber
-
-const wait =
-
-fipeError.kind === 'rate_limit' ? (fipeError.retryAfterMs ?? exponential) : exponential
-
-// Se a espera exigida for longa demais, desiste e deixa a interface orientar o usuário.
-
-if (wait > maxBackoffMs) break
-
-await sleep(wait)
-
-}
-
-}
-
-throw lastError ?? new FipeError('network', 'Falha desconhecida.')
-
-}
-
-
-
-// Métodos async: identificadores inválidos viram Promise rejeitada (nunca exceção síncrona).
-
-return {
-
-getBrands: async (opts) => requestJson('/cars/brands', fipeBrandsSchema, opts),
-
-getModels: async (brandId, opts) =>
-
-requestJson(`/cars/brands/${assertSafeId('marca', brandId)}/models`, fipeModelsSchema, opts),
-
-getYears: async (brandId, modelId, opts) =>
-
-requestJson(
-
-`/cars/brands/${assertSafeId('marca', brandId)}/models/${assertSafeId('modelo', modelId)}/years`,
-
-fipeYearsSchema,
-
-opts,
-
-),
-
-getPrice: async (brandId, modelId, yearId, opts) => {
-
-const body = await requestJson(
-
-`/cars/brands/${assertSafeId('marca', brandId)}/models/${assertSafeId('modelo', modelId)}/years/${assertSafeId('ano', yearId)}`,
-
-fipePriceResponseSchema,
-
-opts,
-
-)
-
-return adaptFipePriceResponse(body)
-
-},
-
-}
-
+      return adaptFipePriceResponse(body)
+    },
+  }
 }

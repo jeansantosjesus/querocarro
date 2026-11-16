@@ -38,78 +38,58 @@ import { VehicleDetailPage } from '../pages/VehicleDetailPage'
 
 import { RequireAccess } from './RequireAccess'
 
-
-
 export function AppRoutes() {
+  return (
+    <Routes>
+      <Route element={<AppLayout />}>
+        {/* Públicas */}
 
-return (
+        <Route index element={<LandingPage />} />
 
-<Routes>
+        <Route path="entrar" element={<LoginPage />} />
 
-<Route element={<AppLayout />}>
+        <Route path="cadastro" element={<SignUpPage />} />
 
-{/* Públicas */}
+        <Route path="recuperar-senha" element={<ForgotPasswordPage />} />
 
-<Route index element={<LandingPage />} />
+        <Route path="redefinir-senha" element={<ResetPasswordPage />} />
 
-<Route path="entrar" element={<LoginPage />} />
+        <Route path="ajuda" element={<HelpIndexPage />} />
 
-<Route path="cadastro" element={<SignUpPage />} />
+        <Route path="ajuda/:slug" element={<HelpArticlePage />} />
 
-<Route path="recuperar-senha" element={<ForgotPasswordPage />} />
+        <Route path="metodologia" element={<MethodologyRedirect />} />
 
-<Route path="redefinir-senha" element={<ResetPasswordPage />} />
+        {/* Privadas: usuário autenticado ou modo demonstração */}
 
-<Route path="ajuda" element={<HelpIndexPage />} />
+        <Route element={<RequireAccess allowDemo />}>
+          <Route path="painel" element={<DashboardPage />} />
 
-<Route path="ajuda/:slug" element={<HelpArticlePage />} />
+          <Route path="simulacao" element={<SimulationPage />} />
 
-<Route path="metodologia" element={<MethodologyRedirect />} />
+          <Route path="resultado" element={<ResultPage />} />
 
+          <Route path="comparar" element={<ComparePage />} />
 
+          <Route path="veiculo/:id" element={<VehicleDetailPage />} />
 
-{/* Privadas: usuário autenticado ou modo demonstração */}
+          <Route path="veiculo/:id/quero-este-carro" element={<InverseSimulationPage />} />
+        </Route>
 
-<Route element={<RequireAccess allowDemo />}>
+        {/* Privadas: somente usuário autenticado */}
 
-<Route path="painel" element={<DashboardPage />} />
+        <Route element={<RequireAccess />}>
+          <Route path="historico" element={<HistoryPage />} />
 
-<Route path="simulacao" element={<SimulationPage />} />
+          <Route path="historico/comparar" element={<HistoryComparePage />} />
 
-<Route path="resultado" element={<ResultPage />} />
+          <Route path="historico/:id" element={<HistoryDetailPage />} />
 
-<Route path="comparar" element={<ComparePage />} />
+          <Route path="perfil" element={<ProfilePage />} />
+        </Route>
 
-<Route path="veiculo/:id" element={<VehicleDetailPage />} />
-
-<Route path="veiculo/:id/quero-este-carro" element={<InverseSimulationPage />} />
-
-</Route>
-
-
-
-{/* Privadas: somente usuário autenticado */}
-
-<Route element={<RequireAccess />}>
-
-<Route path="historico" element={<HistoryPage />} />
-
-<Route path="historico/comparar" element={<HistoryComparePage />} />
-
-<Route path="historico/:id" element={<HistoryDetailPage />} />
-
-<Route path="perfil" element={<ProfilePage />} />
-
-</Route>
-
-
-
-<Route path="*" element={<NotFoundPage />} />
-
-</Route>
-
-</Routes>
-
-)
-
+        <Route path="*" element={<NotFoundPage />} />
+      </Route>
+    </Routes>
+  )
 }

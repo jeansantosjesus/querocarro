@@ -4,15 +4,9 @@ import type { SimulationInput } from '../../schemas/simulation'
 
 import type { DeepPartial } from '../../types/utils'
 
-
-
 export type SimulationDraftInput = DeepPartial<SimulationInput>
 
-
-
 const NEUTRAL_PRIORITIES = { economia: 3, conforto: 3, desempenho: 3, manutencao: 3 }
-
-
 
 /**
 
@@ -23,215 +17,191 @@ const NEUTRAL_PRIORITIES = { economia: 3, conforto: 3, desempenho: 3, manutencao
 */
 
 export function createBlankDraft(): SimulationDraftInput {
+  return {
+    objective: {
+      title: '',
 
-return {
+      scenarioId: 'equilibrado',
 
-objective: {
+      customMarginMultiplier: 1,
 
-title: '',
+      purchaseMode: 'financiado',
 
-scenarioId: 'equilibrado',
+      condition: 'indiferente',
 
-customMarginMultiplier: 1,
+      maxPurchasePrice: null,
+    },
 
-purchaseMode: 'financiado',
+    finance: {
+      otherRecurringExpenses: 0,
 
-condition: 'indiferente',
+      otherDebts: 0,
 
-maxPurchasePrice: null,
+      monthlyReserve: 0,
 
-},
+      reserve: 0,
 
-finance: {
+      accumulatedReserve: 0,
 
-otherRecurringExpenses: 0,
+      reserveMonths: 0,
 
-otherDebts: 0,
+      safetyMarginMonthly: 0,
 
-monthlyReserve: 0,
+      limitMode: 'informado',
 
-reserve: 0,
+      vehicleSharePct: null,
 
-accumulatedReserve: 0,
+      useFullDownPayment: false,
 
-reserveMonths: 0,
+      installments: 48,
 
-safetyMarginMonthly: 0,
+      monthlyRatePct: 1.5,
 
-limitMode: 'informado',
+      maxInstallment: null,
+    },
 
-vehicleSharePct: null,
+    usage: {
+      type: 'misto',
 
-useFullDownPayment: false,
+      daysPerWeek: 5,
 
-installments: 48,
+      monthlyKmOverride: null,
 
-monthlyRatePct: 1.5,
+      passengers: 4,
 
-maxInstallment: null,
+      trunkNeed: 'media',
+    },
 
-},
+    preferences: {
+      fuel: 'indiferente',
 
-usage: {
+      transmission: 'indiferente',
 
-type: 'misto',
+      requireFuel: false,
 
-daysPerWeek: 5,
+      requireTransmission: false,
 
-monthlyKmOverride: null,
+      requireCondition: false,
 
-passengers: 4,
+      yearMin: null,
 
-trunkNeed: 'media',
+      yearMax: null,
 
-},
+      wantedBrands: [],
 
-preferences: {
+      avoidedBrands: [],
 
-fuel: 'indiferente',
+      priorities: { ...NEUTRAL_PRIORITIES },
+    },
 
-transmission: 'indiferente',
+    weights: initialWeights('equilibrado', NEUTRAL_PRIORITIES),
 
-requireFuel: false,
+    assumptionOverrides: {},
 
-requireTransmission: false,
+    allowDemonstrativeTax: false,
 
-requireCondition: false,
-
-yearMin: null,
-
-yearMax: null,
-
-wantedBrands: [],
-
-avoidedBrands: [],
-
-priorities: { ...NEUTRAL_PRIORITIES },
-
-},
-
-weights: initialWeights('equilibrado', NEUTRAL_PRIORITIES),
-
-assumptionOverrides: {},
-
-allowDemonstrativeTax: false,
-
-useLiveFipe: true,
-
+    useLiveFipe: true,
+  }
 }
-
-}
-
-
 
 /** Dados FICTÍCIOS para o modo demonstração (nenhum dado pessoal real). */
 
 export const DEMO_INPUT: SimulationInput = {
+  objective: {
+    title: 'Demonstração (dados fictícios)',
 
-objective: {
+    scenarioId: 'equilibrado',
 
-title: 'Demonstração (dados fictícios)',
+    customMarginMultiplier: 1,
 
-scenarioId: 'equilibrado',
+    purchaseMode: 'financiado',
 
-customMarginMultiplier: 1,
+    condition: 'indiferente',
 
-purchaseMode: 'financiado',
+    maxPurchasePrice: null,
+  },
 
-condition: 'indiferente',
+  finance: {
+    netIncome: 12000,
 
-maxPurchasePrice: null,
+    fixedExpenses: 4000,
 
-},
+    otherRecurringExpenses: 0,
 
-finance: {
+    otherDebts: 0,
 
-netIncome: 12000,
+    monthlyReserve: 0,
 
-fixedExpenses: 4000,
+    downPayment: 30000,
 
-otherRecurringExpenses: 0,
+    reserve: 10000,
 
-otherDebts: 0,
+    accumulatedReserve: 40000,
 
-monthlyReserve: 0,
+    reserveMonths: 0,
 
-downPayment: 30000,
+    safetyMarginMonthly: 0,
 
-reserve: 10000,
+    limitMode: 'informado',
 
-accumulatedReserve: 40000,
+    vehicleSharePct: null,
 
-reserveMonths: 0,
+    useFullDownPayment: false,
 
-safetyMarginMonthly: 0,
+    maxMonthlyVehicleSpend: 3500,
 
-limitMode: 'informado',
+    installments: 48,
 
-vehicleSharePct: null,
+    monthlyRatePct: 1.5,
 
-useFullDownPayment: false,
+    maxInstallment: 2200,
+  },
 
-maxMonthlyVehicleSpend: 3500,
+  usage: {
+    type: 'misto',
 
-installments: 48,
+    kmPerDay: 30,
 
-monthlyRatePct: 1.5,
+    daysPerWeek: 5,
 
-maxInstallment: 2200,
+    monthlyKmOverride: null,
 
-},
+    passengers: 4,
 
-usage: {
+    trunkNeed: 'media',
+  },
 
-type: 'misto',
+  preferences: {
+    fuel: 'indiferente',
 
-kmPerDay: 30,
+    transmission: 'indiferente',
 
-daysPerWeek: 5,
+    requireFuel: false,
 
-monthlyKmOverride: null,
+    requireTransmission: false,
 
-passengers: 4,
+    requireCondition: false,
 
-trunkNeed: 'media',
+    yearMin: null,
 
-},
+    yearMax: null,
 
-preferences: {
+    wantedBrands: [],
 
-fuel: 'indiferente',
+    avoidedBrands: [],
 
-transmission: 'indiferente',
+    priorities: { ...NEUTRAL_PRIORITIES },
+  },
 
-requireFuel: false,
+  weights: initialWeights('equilibrado', NEUTRAL_PRIORITIES),
 
-requireTransmission: false,
+  assumptionOverrides: {},
 
-requireCondition: false,
+  // UF de exemplo do modo demonstração, visível e alterável. Não é inferência silenciosa.
 
-yearMin: null,
+  registrationState: 'BA',
 
-yearMax: null,
+  allowDemonstrativeTax: false,
 
-wantedBrands: [],
-
-avoidedBrands: [],
-
-priorities: { ...NEUTRAL_PRIORITIES },
-
-},
-
-weights: initialWeights('equilibrado', NEUTRAL_PRIORITIES),
-
-assumptionOverrides: {},
-
-// UF de exemplo do modo demonstração, visível e alterável. Não é inferência silenciosa.
-
-registrationState: 'BA',
-
-allowDemonstrativeTax: false,
-
-useLiveFipe: false,
-
+  useLiveFipe: false,
 }

@@ -12,8 +12,6 @@ import type { SavedResultItem, SimulationDraft } from '../../types/history'
 
 import type { VehicleCatalog } from '../../types/vehicle'
 
-
-
 /**
 
 * Converte o resultado atual em um rascunho persistível.
@@ -25,71 +23,59 @@ import type { VehicleCatalog } from '../../types/vehicle'
 */
 
 export function buildSimulationDraft(
+  input: SimulationInput,
 
-input: SimulationInput,
+  result: DecisionResult,
 
-result: DecisionResult,
-
-catalog: VehicleCatalog,
-
+  catalog: VehicleCatalog,
 ): SimulationDraft {
+  const scenario = resolveScenario(input.objective)
 
-const scenario = resolveScenario(input.objective)
+  const groupIds = new Set(result.group.map((item) => item.vehicle.id))
 
-const groupIds = new Set(result.group.map((item) => item.vehicle.id))
+  const results: SavedResultItem[] = result.ranking.map((item) => ({
+    vehicleFipeCode: item.vehicle.fipeCode,
 
-const results: SavedResultItem[] = result.ranking.map((item) => ({
+    vehicleYearId: item.vehicle.fipeYearId,
 
-vehicleFipeCode: item.vehicle.fipeCode,
+    compatibilityIndex: item.index,
 
-vehicleYearId: item.vehicle.fipeYearId,
+    inRecommendedGroup: groupIds.has(item.vehicle.id),
 
-compatibilityIndex: item.index,
+    rank: item.rank,
 
-inRecommendedGroup: groupIds.has(item.vehicle.id),
+    payload: item,
+  }))
 
-rank: item.rank,
+  return {
+    title: input.objective.title,
 
-payload: item,
+    scenarioId: input.objective.scenarioId,
 
-}))
+    inputs: input,
 
+    weights: input.weights,
 
+    scenarioSnapshot: {
+      scenarioId: input.objective.scenarioId,
 
-return {
+      modelVersion: MODEL_VERSION,
 
-title: input.objective.title,
+      multipliers: scenario.multipliers,
 
-scenarioId: input.objective.scenarioId,
+      monthlyLimitShare: scenario.monthlyLimitShare,
 
-inputs: input,
+      maxIncomeCommitment: scenario.maxIncomeCommitment,
 
-weights: input.weights,
+      premises: buildPremises(input, referenceYearOf(catalog.referenceMonth)),
+    },
 
-scenarioSnapshot: {
+    fipeReferenceMonth: catalog.referenceMonth,
 
-scenarioId: input.objective.scenarioId,
+    fipeReferenceMonthLabel: catalog.referenceMonthLabel,
 
-modelVersion: MODEL_VERSION,
+    catalogVersion: catalog.version,
 
-multipliers: scenario.multipliers,
-
-monthlyLimitShare: scenario.monthlyLimitShare,
-
-maxIncomeCommitment: scenario.maxIncomeCommitment,
-
-premises: buildPremises(input, referenceYearOf(catalog.referenceMonth)),
-
-},
-
-fipeReferenceMonth: catalog.referenceMonth,
-
-fipeReferenceMonthLabel: catalog.referenceMonthLabel,
-
-catalogVersion: catalog.version,
-
-results,
-
-}
-
+    results,
+  }
 }

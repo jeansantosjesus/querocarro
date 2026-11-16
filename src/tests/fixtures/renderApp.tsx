@@ -5,15 +5,10 @@ import userEvent from '@testing-library/user-event'
 import { useEffect } from 'react'
 
 import {
-
-MemoryRouter,
-
-useNavigate,
-
-type InitialEntry,
-
-type NavigateFunction,
-
+  MemoryRouter,
+  useNavigate,
+  type InitialEntry,
+  type NavigateFunction,
 } from 'react-router-dom'
 
 import { AppProviders } from '../../app/AppProviders'
@@ -30,132 +25,91 @@ import type { VehicleImageProvider } from '../../services/images/types'
 
 import { MockVehicleDataProvider } from '../../services/vehicles/MockVehicleDataProvider'
 
-
-
 export const TEST_USER = {
+  name: 'Maria Silva',
 
-name: 'Maria Silva',
+  email: 'maria@example.com',
 
-email: 'maria@example.com',
-
-password: 'SenhaForte123',
-
+  password: 'SenhaForte123',
 }
-
-
 
 interface RenderAppOptions {
+  route?: InitialEntry
 
-route?: InitialEntry
+  auth?: MemoryAuthService
 
-auth?: MemoryAuthService
+  db?: MemoryDatabase
 
-db?: MemoryDatabase
+  providerFactory?: ProviderFactory
 
-providerFactory?: ProviderFactory
+  /** Fonte de fotos. Padrão nos testes: nenhuma (sem rede). */
 
-/** Fonte de fotos. Padrão nos testes: nenhuma (sem rede). */
+  imageProvider?: VehicleImageProvider | null
 
-imageProvider?: VehicleImageProvider | null
+  /** Cria o usuário de teste e inicia a sessão antes de renderizar. */
 
-/** Cria o usuário de teste e inicia a sessão antes de renderizar. */
-
-signedIn?: boolean
-
+  signedIn?: boolean
 }
-
-
 
 function NavigatorCapture({ onReady }: { onReady: (navigate: NavigateFunction) => void }) {
+  const navigate = useNavigate()
 
-const navigate = useNavigate()
+  useEffect(() => {
+    onReady(navigate)
+  }, [navigate, onReady])
 
-useEffect(() => {
-
-onReady(navigate)
-
-}, [navigate, onReady])
-
-return null
-
+  return null
 }
-
-
 
 /** Renderiza o app completo com serviços em memória (sem rede, sem Supabase). */
 
 export async function renderApp(options: RenderAppOptions = {}) {
+  const auth = options.auth ?? new MemoryAuthService()
 
-const auth = options.auth ?? new MemoryAuthService()
+  const db = options.db ?? new MemoryDatabase()
 
-const db = options.db ?? new MemoryDatabase()
+  const providerFactory: ProviderFactory =
+    options.providerFactory ?? (() => new MockVehicleDataProvider())
 
-const providerFactory: ProviderFactory =
+  if (options.signedIn) {
+    await auth.signUp({
+      name: TEST_USER.name,
 
-options.providerFactory ?? (() => new MockVehicleDataProvider())
+      email: TEST_USER.email,
 
+      password: TEST_USER.password,
+    })
 
+    await auth.signIn({ email: TEST_USER.email, password: TEST_USER.password, remember: false })
+  }
 
-if (options.signedIn) {
+  let navigate: NavigateFunction = () => {
+    throw new Error('Navegação ainda não disponível.')
+  }
 
-await auth.signUp({
+  const user = userEvent.setup()
 
-name: TEST_USER.name,
+  const utils = render(
+    <MemoryRouter initialEntries={[options.route ?? '/']}>
+      <AppProviders
+        authService={auth}
 
-email: TEST_USER.email,
+        repositoryFactory={(userId) => db.repositoriesFor(userId)}
 
-password: TEST_USER.password,
+        providerFactory={providerFactory}
 
-})
+        imageProvider={options.imageProvider ?? null}
+      >
+        <NavigatorCapture
+          onReady={(fn) => {
+            navigate = fn
+          }}
+        />
 
-await auth.signIn({ email: TEST_USER.email, password: TEST_USER.password, remember: false })
+        <AppRoutes />
+      </AppProviders>
+    </MemoryRouter>,
+  )
 
-}
-
-
-
-let navigate: NavigateFunction = () => {
-
-throw new Error('Navegação ainda não disponível.')
-
-}
-
-const user = userEvent.setup()
-
-const utils = render(
-
-<MemoryRouter initialEntries={[options.route ?? '/']}>
-
-<AppProviders
-
-authService={auth}
-
-repositoryFactory={(userId) => db.repositoriesFor(userId)}
-
-providerFactory={providerFactory}
-
-imageProvider={options.imageProvider ?? null}
-
->
-
-<NavigatorCapture
-
-onReady={(fn) => {
-
-navigate = fn
-
-}}
-
-/>
-
-<AppRoutes />
-
-</AppProviders>
-
-</MemoryRouter>,
-
-)
-
-return { user, auth, db, goTo: (path: string) => navigate(path), ...utils }
-
+  return { user, auth, db, goTo: (path: string) => navigate(path), ...utils }
 }

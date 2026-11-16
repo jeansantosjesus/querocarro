@@ -1,31 +1,25 @@
 import type { ValueOrigin } from './vehicle'
 
-
-
 export type Periodicity = 'mensal' | 'anual' | 'unico' | 'por_km'
 
 export type Reliability = 'alta' | 'media' | 'baixa'
 
-
-
 /** Metadados exigidos para todo valor estimado exibido ao usuário. */
 
 export interface EstimateMeta {
+  label: string
 
-label: string
+  origin: ValueOrigin
 
-origin: ValueOrigin
+  assumption: string
 
-assumption: string
+  periodicity: Periodicity
 
-periodicity: Periodicity
+  /** Data ou mês de referência (YYYY-MM ou YYYY-MM-DD). */
 
-/** Data ou mês de referência (YYYY-MM ou YYYY-MM-DD). */
+  reference: string
 
-reference: string
+  reliability: Reliability
 
-reliability: Reliability
-
-adjustable: boolean
-
+  adjustable: boolean
 }

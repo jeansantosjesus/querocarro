@@ -6,8 +6,6 @@ import type { Vehicle } from './vehicle'
 
 import type { VehicleTco } from './tco'
 
-
-
 /**
 
 * Critérios do WSM. O custo total no horizonte (TCO) substitui preço, custo mensal, consumo,
@@ -18,8 +16,6 @@ import type { VehicleTco } from './tco'
 
 export const CRITERION_IDS = ['tco', 'incomeCommitment', 'usageFit', 'preference'] as const
 
-
-
 export type CriterionId = (typeof CRITERION_IDS)[number]
 
 export type CriterionDirection = 'cost' | 'benefit'
@@ -28,280 +24,237 @@ export type Weights = Record<CriterionId, number>
 
 export type ScenarioId = 'economico' | 'equilibrado' | 'conservador' | 'personalizado'
 
-
-
 export type ExplanationSeverity = 'favoravel' | 'atencao' | 'informativo'
 
-
-
 export interface ExplanationItem {
+  code: string
 
-code: string
+  text: string
 
-text: string
-
-severity: ExplanationSeverity
-
+  severity: ExplanationSeverity
 }
-
-
 
 export type ExclusionStage = 'qualidade' | 'dados' | 'filtro' | 'viabilidade'
 
-
-
 export type AffordabilityClass =
-
-'confortavel' | 'adequada' | 'proxima_do_limite' | 'acima_do_limite' | 'inviavel'
-
-
+  'confortavel' | 'adequada' | 'proxima_do_limite' | 'acima_do_limite' | 'inviavel'
 
 export interface FinancialScoreParts {
+  utilization: number
 
-utilization: number
+  availableCommitment: number
 
-availableCommitment: number
+  priceCapacity: number
 
-priceCapacity: number
+  margin: number
 
-margin: number
-
-reserve: number
-
+  reserve: number
 }
-
-
 
 export interface ExclusionRecord {
+  vehicleId: string
 
-vehicleId: string
+  label: string
 
-label: string
+  stage: ExclusionStage
 
-stage: ExclusionStage
+  code: string
 
-code: string
+  message: string
 
-message: string
+  /** Valor exigido pela restrição, quando houver. */
 
-/** Valor exigido pela restrição, quando houver. */
+  required?: number | null
 
-required?: number | null
+  /** Valor disponível na simulação, quando houver. */
 
-/** Valor disponível na simulação, quando houver. */
+  available?: number | null
 
-available?: number | null
+  /** Distância até a viabilidade (exigido − disponível), nunca negativa. */
 
-/** Distância até a viabilidade (exigido − disponível), nunca negativa. */
-
-gap?: number | null
-
+  gap?: number | null
 }
-
-
 
 /** Componentes de custo, todos nullable: ausente nunca vira zero. */
 
 export interface VehicleCosts {
+  priceBRL: number
 
-priceBRL: number
+  downPaymentUsed: number
 
-downPaymentUsed: number
+  financedAmount: number
 
-financedAmount: number
+  monthlyInstallment: number
 
-monthlyInstallment: number
+  /** null quando a UF não tem regra utilizável e a pessoa não informou alíquota. */
 
-/** null quando a UF não tem regra utilizável e a pessoa não informou alíquota. */
+  ipvaAnnual: number | null
 
-ipvaAnnual: number | null
+  licensingAnnual: number
 
-licensingAnnual: number
+  /** Fotografia do IPVA usado neste veículo. */
 
-/** Fotografia do IPVA usado neste veículo. */
+  regionalTax: RegionalTaxCalculation
 
-regionalTax: RegionalTaxCalculation
+  insuranceAnnual: number | null
 
-insuranceAnnual: number | null
+  maintenanceAnnual: number | null
 
-maintenanceAnnual: number | null
+  energyMonthly: number | null
 
-energyMonthly: number | null
+  energyCostPerKm: number | null
 
-energyCostPerKm: number | null
+  depreciationAnnual: number | null
 
-depreciationAnnual: number | null
+  /** Soma completa conforme fórmula do SAD; null se algum componente estiver ausente. */
 
-/** Soma completa conforme fórmula do SAD; null se algum componente estiver ausente. */
+  monthlyTotal: number | null
 
-monthlyTotal: number | null
+  /** monthlyTotal sem depreciação (desembolso mensal de caixa). */
 
-/** monthlyTotal sem depreciação (desembolso mensal de caixa). */
+  monthlyCash: number | null
 
-monthlyCash: number | null
+  annualTotal: number | null
 
-annualTotal: number | null
+  effectiveConsumption: number | null
 
-effectiveConsumption: number | null
+  monthlyKm: number
 
-monthlyKm: number
+  usedFuelLabel: string
 
-usedFuelLabel: string
-
-notes: string[]
-
+  notes: string[]
 }
-
-
 
 export interface FinancialIndicators {
+  /** monthlyTotal / renda líquida (0-1+), null se renda inválida ou custo ausente. */
 
-/** monthlyTotal / renda líquida (0-1+), null se renda inválida ou custo ausente. */
+  commitmentRatio: number | null
 
-commitmentRatio: number | null
+  /** custo / orçamento mensal do veículo. */
 
-/** custo / orçamento mensal do veículo. */
+  limitUsageRatio: number | null
 
-limitUsageRatio: number | null
+  availableMonthly: number
 
-availableMonthly: number
+  /** Custo mensal / renda disponível. Null se a renda disponível não for positiva. */
 
-/** Custo mensal / renda disponível. Null se a renda disponível não for positiva. */
+  availableCommitment: number | null
 
-availableCommitment: number | null
+  remainingMargin: number | null
 
-remainingMargin: number | null
+  /** Renda disponível / custo mensal. */
 
-/** Renda disponível / custo mensal. */
+  coverageIndex: number | null
 
-coverageIndex: number | null
+  priceToPurchasePowerRatio: number | null
 
-priceToPurchasePowerRatio: number | null
+  acquisitionCapacity: number | null
 
-acquisitionCapacity: number | null
+  acquisitionMargin: number | null
 
-acquisitionMargin: number | null
+  affordabilityClass: AffordabilityClass | null
 
-affordabilityClass: AffordabilityClass | null
+  /** Score 0–100 com saturação. É o valor do critério financeiro. */
 
-/** Score 0–100 com saturação. É o valor do critério financeiro. */
+  financialScore: number | null
 
-financialScore: number | null
+  financialContributions: FinancialScoreParts | null
 
-financialContributions: FinancialScoreParts | null
-
-pressureLevel: PressureLevel | null
-
+  pressureLevel: PressureLevel | null
 }
-
-
 
 export interface RankedVehicle {
+  vehicle: Vehicle
 
-vehicle: Vehicle
+  costs: VehicleCosts
 
-costs: VehicleCosts
+  financial: FinancialIndicators
 
-financial: FinancialIndicators
+  /** TCO por horizonte e sistema. Informação complementar: o critério usa só o horizonte padrão. */
 
-/** TCO por horizonte e sistema. Informação complementar: o critério usa só o horizonte padrão. */
+  tco: VehicleTco
 
-tco: VehicleTco
+  criteria: Record<CriterionId, number | null>
 
-criteria: Record<CriterionId, number | null>
+  normalized: Record<CriterionId, number | null>
 
-normalized: Record<CriterionId, number | null>
+  /** Peso efetivo (%), já renormalizado quando há critérios ausentes. */
 
-/** Peso efetivo (%), já renormalizado quando há critérios ausentes. */
+  effectiveWeights: Record<CriterionId, number>
 
-effectiveWeights: Record<CriterionId, number>
+  /** Pontos de contribuição de cada critério ao índice base. */
 
-/** Pontos de contribuição de cada critério ao índice base. */
+  contributions: Record<CriterionId, number>
 
-contributions: Record<CriterionId, number>
+  missingCriteria: CriterionId[]
 
-missingCriteria: CriterionId[]
+  baseIndex: number
 
-baseIndex: number
+  penalty: number
 
-penalty: number
+  /** Índice de compatibilidade 0-100. */
 
-/** Índice de compatibilidade 0-100. */
+  index: number
 
-index: number
+  rank: number
 
-rank: number
+  pros: ExplanationItem[]
 
-pros: ExplanationItem[]
+  alerts: ExplanationItem[]
 
-alerts: ExplanationItem[]
+  /** Análises complementares: não entram no índice nem na ordem do ranking. */
 
-/** Análises complementares: não entram no índice nem na ordem do ranking. */
-
-analytics: VehicleAnalytics
-
+  analytics: VehicleAnalytics
 }
-
-
 
 export interface NormalizationStat {
+  min: number
 
-min: number
+  max: number
 
-max: number
+  count: number
 
-count: number
-
-degenerate: boolean
-
+  degenerate: boolean
 }
-
-
 
 export interface AdjustmentSuggestion {
+  id: string
 
-id: string
+  label: string
 
-label: string
-
-wouldYield: number
-
+  wouldYield: number
 }
 
-
-
 export interface DecisionResult {
+  scenarioId: ScenarioId
 
-scenarioId: ScenarioId
+  weights: Weights
 
-weights: Weights
+  modelVersion: string
 
-modelVersion: string
+  ranking: RankedVehicle[]
 
-ranking: RankedVehicle[]
+  group: RankedVehicle[]
 
-group: RankedVehicle[]
+  excluded: ExclusionRecord[]
 
-excluded: ExclusionRecord[]
+  eligibleCount: number
 
-eligibleCount: number
+  evaluatedCount: number
 
-evaluatedCount: number
+  noOptions: boolean
 
-noOptions: boolean
+  suggestions: AdjustmentSuggestion[]
 
-suggestions: AdjustmentSuggestion[]
+  stats: Record<CriterionId, NormalizationStat | null>
 
-stats: Record<CriterionId, NormalizationStat | null>
+  effectiveMonthlyLimit: number
 
-effectiveMonthlyLimit: number
+  /** Premissa do orçamento mensal e alertas da casa, como o uso autorizado da reserva. */
 
-/** Premissa do orçamento mensal e alertas da casa, como o uso autorizado da reserva. */
+  budgetPremise: string
 
-budgetPremise: string
+  budgetAlerts: string[]
 
-budgetAlerts: string[]
-
-analytics: DecisionAnalytics
-
+  analytics: DecisionAnalytics
 }

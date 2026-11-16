@@ -167,7 +167,7 @@ const ARTICLE_METODOLOGIA: HelpArticle = {
     'renda',
     'orçamento',
   ],
-sections: [
+  sections: [
     {
       id: 'modelo',
       title: 'Modelo',
@@ -307,7 +307,8 @@ const ARTICLE_FORMULAS: HelpArticle = {
       formulas: [
         'custo mensal = parcela + IPVA ÷ 12 + licenciamento ÷ 12 + seguro ÷ 12 + manutenção ÷ 12 + energia mensal + depreciação ÷ 12',
       ],
-    },{
+    },
+    {
       id: 'renda-disponivel-formula',
       title: 'Renda disponível e limite',
       paragraphs: [
@@ -469,7 +470,8 @@ const ARTICLE_ANALISES: HelpArticle = {
         `Aderência ao uso, por faixas: muito alta a partir de ${ADHERENCE_THRESHOLDS.muitoAlta}; alta a partir de ${ADHERENCE_THRESHOLDS.alta}; moderada a partir de ${ADHERENCE_THRESHOLDS.moderada}; baixa a partir de ${ADHERENCE_THRESHOLDS.baixa}; abaixo disso, incompatível.`,
         'Pressão financeira, pelas faixas do comprometimento da renda (ver Metodologia). São regras fixas, não um modelo treinado.',
       ],
-    },{
+    },
+    {
       id: 'regressao',
       title: 'Regressão',
       paragraphs: [
@@ -784,4 +786,4 @@ export const HELP_ARTICLES: readonly HelpArticle[] = [
 
 export function findHelpArticle(slug: string): HelpArticle | undefined {
   return HELP_ARTICLES.find((article) => article.slug === slug)
-  }
+}

@@ -195,7 +195,7 @@ function reason(
   const gap =
     required === null || available === null ? null : roundMoney(Math.max(0, required - available))
   return { code, message, required, available, gap }
-             }
+}
 /**
  * Viabilidade de um veículo diante do orçamento da casa.
  * Restrição rígida não recebe score: preferência e TCO não compensam inviabilidade.
@@ -366,4 +366,4 @@ export function assessVehicle(input: {
     financialScore,
     contributions,
   }
-      }
+}

@@ -4,17 +4,11 @@ import { Spinner } from '../components/ui/Spinner'
 
 import { useAuth } from '../features/auth/AuthContext'
 
-
-
 interface RequireAccessProps {
+  /** Se verdadeiro, o modo demonstração também libera a rota. */
 
-/** Se verdadeiro, o modo demonstração também libera a rota. */
-
-allowDemo?: boolean
-
+  allowDemo?: boolean
 }
-
-
 
 /**
 
@@ -25,33 +19,23 @@ allowDemo?: boolean
 */
 
 export function RequireAccess({ allowDemo = false }: RequireAccessProps) {
+  const { status, isDemo, signedOutByUser } = useAuth()
 
-const { status, isDemo, signedOutByUser } = useAuth()
+  const location = useLocation()
 
-const location = useLocation()
+  if (status === 'loading') {
+    return <Spinner label="Verificando sua sessão…" />
+  }
 
+  if (status === 'authenticated' || (allowDemo && isDemo)) {
+    return <Outlet />
+  }
 
+  // Saída deliberada ("Sair", exclusão de conta): volta ao início, sem tela de login.
 
-if (status === 'loading') {
+  if (signedOutByUser) {
+    return <Navigate to="/" replace />
+  }
 
-return <Spinner label="Verificando sua sessão…" />
-
-}
-
-if (status === 'authenticated' || (allowDemo && isDemo)) {
-
-return <Outlet />
-
-}
-
-// Saída deliberada ("Sair", exclusão de conta): volta ao início, sem tela de login.
-
-if (signedOutByUser) {
-
-return <Navigate to="/" replace />
-
-}
-
-return <Navigate to="/entrar" replace state={{ from: location.pathname }} />
-
+  return <Navigate to="/entrar" replace state={{ from: location.pathname }} />
 }

@@ -14,210 +14,145 @@ import { formatNumber } from '../../../utils/format'
 
 import { NumberField } from './NumberField'
 
-
-
 const USAGE_LABELS = {
+  urbano: 'Urbano',
 
-urbano: 'Urbano',
+  rodoviario: 'Rodoviário',
 
-rodoviario: 'Rodoviário',
-
-misto: 'Misto',
-
+  misto: 'Misto',
 } as const
 
-
-
 export function StepUsage() {
+  const {
+    register,
 
-const {
+    watch,
 
-register,
+    formState: { errors },
+  } = useFormContext<SimulationInput>()
 
-watch,
+  const kmPerDay = Number(watch('usage.kmPerDay'))
 
-formState: { errors },
+  const days = Number(watch('usage.daysPerWeek'))
 
-} = useFormContext<SimulationInput>()
+  const override = watch('usage.monthlyKmOverride')
 
-const kmPerDay = Number(watch('usage.kmPerDay'))
+  const monthlyKm =
+    Number.isFinite(kmPerDay) && Number.isFinite(days)
+      ? calculateMonthlyKm({
+          kmPerDay,
 
-const days = Number(watch('usage.daysPerWeek'))
+          daysPerWeek: days,
 
-const override = watch('usage.monthlyKmOverride')
+          monthlyKmOverride:
+            typeof override === 'number' && Number.isFinite(override) ? override : null,
+        } as SimulationInput['usage'])
+      : null
 
-const monthlyKm =
+  const err = errors.usage
 
-Number.isFinite(kmPerDay) && Number.isFinite(days)
+  return (
+    <div className="space-y-6">
+      <fieldset>
+        <legend className="qc-label">Tipo de uso predominante</legend>
 
-? calculateMonthlyKm({
+        <div className="grid gap-3 sm:grid-cols-3">
+          {(Object.keys(USAGE_LABELS) as Array<keyof typeof USAGE_LABELS>).map((type) => (
+            <label
+              key={type}
 
-kmPerDay,
+              className="flex cursor-pointer items-start gap-3 rounded-xl border border-ink-300 bg-white p-4 has-[:checked]:border-brand-700 has-[:checked]:bg-brand-50"
+            >
+              <input
+                type="radio"
 
-daysPerWeek: days,
+                value={type}
 
-monthlyKmOverride:
+                className="mt-1 size-5"
 
-typeof override === 'number' && Number.isFinite(override) ? override : null,
+                {...register('usage.type')}
+              />
 
-} as SimulationInput['usage'])
+              <span>
+                <span className="block font-semibold">{USAGE_LABELS[type]}</span>
 
-: null
+                <span className="block text-sm text-ink-700">
+                  Consumo estimado com {Math.round(USAGE_MIX[type].urban * 100)}% urbano /{' '}
+                  {Math.round(USAGE_MIX[type].highway * 100)}% estrada
+                </span>
+              </span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
 
-const err = errors.usage
+      <div className="grid gap-6 sm:grid-cols-2">
+        <NumberField
+          name="usage.kmPerDay"
 
+          label="Quilômetros por dia de uso"
 
+          min={0}
 
-return (
+          max={INPUT_LIMITS.kmPerDay.max}
+        />
 
-<div className="space-y-6">
+        <NumberField
+          name="usage.daysPerWeek"
 
-<fieldset>
+          label="Dias de uso por semana"
 
-<legend className="qc-label">Tipo de uso predominante</legend>
+          step="1"
 
-<div className="grid gap-3 sm:grid-cols-3">
+          min={1}
 
-{(Object.keys(USAGE_LABELS) as Array<keyof typeof USAGE_LABELS>).map((type) => (
+          max={7}
+        />
 
-<label
+        <NumberField
+          name="usage.monthlyKmOverride"
 
-key={type}
+          label="Quilometragem mensal (opcional)"
 
-className="flex cursor-pointer items-start gap-3 rounded-xl border border-ink-300 bg-white p-4 has-[:checked]:border-brand-700 has-[:checked]:bg-brand-50"
+          optional
 
->
+          min={0}
 
-<input
+          max={INPUT_LIMITS.kmPerMonth.max}
 
-type="radio"
+          hint="Se preencher, substitui o cálculo por km/dia."
+        />
 
-value={type}
+        <NumberField
+          name="usage.passengers"
 
-className="mt-1 size-5"
+          label="Passageiros habituais (incluindo você)"
 
-{...register('usage.type')}
+          step="1"
 
-/>
+          min={1}
 
-<span>
+          max={9}
+        />
+      </div>
 
-<span className="block font-semibold">{USAGE_LABELS[type]}</span>
+      {monthlyKm !== null ? (
+        <p className="rounded-xl bg-ink-100 p-3 text-sm" aria-live="polite">
+          Quilometragem mensal estimada: <strong>{formatNumber(monthlyKm, 0)} km</strong>
+        </p>
+      ) : null}
 
-<span className="block text-sm text-ink-700">
+      <Field label="Necessidade de porta-malas" error={err?.trunkNeed?.message}>
+        {(props) => (
+          <select {...props} className="qc-input" {...register('usage.trunkNeed')}>
+            <option value="baixa">Baixa (compras pequenas)</option>
 
-Consumo estimado com {Math.round(USAGE_MIX[type].urban * 100)}% urbano /{' '}
+            <option value="media">Média (bagagem de viagem curta)</option>
 
-{Math.round(USAGE_MIX[type].highway * 100)}% estrada
-
-</span>
-
-</span>
-
-</label>
-
-))}
-
-</div>
-
-</fieldset>
-
-
-
-<div className="grid gap-6 sm:grid-cols-2">
-
-<NumberField
-
-name="usage.kmPerDay"
-
-label="Quilômetros por dia de uso"
-
-min={0}
-
-max={INPUT_LIMITS.kmPerDay.max}
-
-/>
-
-<NumberField
-
-name="usage.daysPerWeek"
-
-label="Dias de uso por semana"
-
-step="1"
-
-min={1}
-
-max={7}
-
-/>
-
-<NumberField
-
-name="usage.monthlyKmOverride"
-
-label="Quilometragem mensal (opcional)"
-
-optional
-
-min={0}
-
-max={INPUT_LIMITS.kmPerMonth.max}
-
-hint="Se preencher, substitui o cálculo por km/dia."
-
-/>
-
-<NumberField
-
-name="usage.passengers"
-
-label="Passageiros habituais (incluindo você)"
-
-step="1"
-
-min={1}
-
-max={9}
-
-/>
-
-</div>
-
-
-
-{monthlyKm !== null ? (
-
-<p className="rounded-xl bg-ink-100 p-3 text-sm" aria-live="polite">
-
-Quilometragem mensal estimada: <strong>{formatNumber(monthlyKm, 0)} km</strong>
-
-</p>
-
-) : null}
-
-
-
-<Field label="Necessidade de porta-malas" error={err?.trunkNeed?.message}>
-
-{(props) => (
-
-<select {...props} className="qc-input" {...register('usage.trunkNeed')}>
-
-<option value="baixa">Baixa (compras pequenas)</option>
-
-<option value="media">Média (bagagem de viagem curta)</option>
-
-<option value="alta">Alta (família, carga, viagens longas)</option>
-
-</select>
-
-)}
-
-</Field>
-
-</div>
-
-)
-
+            <option value="alta">Alta (família, carga, viagens longas)</option>
+          </select>
+        )}
+      </Field>
+    </div>
+  )
 }

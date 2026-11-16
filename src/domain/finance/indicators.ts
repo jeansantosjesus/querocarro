@@ -6,17 +6,11 @@ import type { FinanceInput, UsageInput } from '../../schemas/simulation'
 
 import { calculateHouseholdBudget } from './capacity'
 
-
-
 /** Converte valor anual em equivalente mensal. */
 
 export function annualToMonthly(annual: number): number {
-
-return annual / 12
-
+  return annual / 12
 }
-
-
 
 /**
 
@@ -27,14 +21,10 @@ return annual / 12
 */
 
 export function calculateCommitmentRatio(monthlyCost: number, netIncome: number): number | null {
+  if (!Number.isFinite(monthlyCost) || !Number.isFinite(netIncome) || netIncome <= 0) return null
 
-if (!Number.isFinite(monthlyCost) || !Number.isFinite(netIncome) || netIncome <= 0) return null
-
-return monthlyCost / netIncome
-
+  return monthlyCost / netIncome
 }
-
-
 
 /**
 
@@ -45,34 +35,20 @@ return monthlyCost / netIncome
 */
 
 export function calculateAvailableMonthly(finance: FinanceInput): number {
-
-return (
-
-finance.netIncome -
-
-finance.fixedExpenses -
-
-finance.otherRecurringExpenses -
-
-finance.otherDebts -
-
-finance.monthlyReserve
-
-)
-
+  return (
+    finance.netIncome -
+    finance.fixedExpenses -
+    finance.otherRecurringExpenses -
+    finance.otherDebts -
+    finance.monthlyReserve
+  )
 }
-
-
 
 /** Margem restante após o custo mensal do veículo. */
 
 export function calculateRemainingMargin(availableMonthly: number, monthlyCost: number): number {
-
-return availableMonthly - monthlyCost
-
+  return availableMonthly - monthlyCost
 }
-
-
 
 /**
 
@@ -85,29 +61,22 @@ return availableMonthly - monthlyCost
 */
 
 export function calculatePriceToPurchasePower(
+  price: number,
 
-price: number,
+  finance: FinanceInput,
 
-finance: FinanceInput,
-
-purchaseMode: 'avista' | 'financiado',
-
+  purchaseMode: 'avista' | 'financiado',
 ): number | null {
+  const installmentCapacity =
+    purchaseMode === 'financiado' && finance.maxInstallment !== null
+      ? finance.maxInstallment * finance.installments
+      : 0
 
-const installmentCapacity =
+  const capacity = finance.downPayment + installmentCapacity
 
-purchaseMode === 'financiado' && finance.maxInstallment !== null
+  if (capacity <= 0) return null
 
-? finance.maxInstallment * finance.installments
-
-: 0
-
-const capacity = finance.downPayment + installmentCapacity
-
-if (capacity <= 0) return null
-
-return price / capacity
-
+  return price / capacity
 }
 
 /**
@@ -123,25 +92,17 @@ return price / capacity
 */
 
 export function calculateEffectiveMonthlyLimit(
+  finance: FinanceInput,
 
-finance: FinanceInput,
-
-scenario: ScenarioDefinition,
-
+  scenario: ScenarioDefinition,
 ): number {
-
-return calculateHouseholdBudget(finance, scenario).vehicleBudget
-
+  return calculateHouseholdBudget(finance, scenario).vehicleBudget
 }
-
-
 
 /** Quilômetros mensais: informado diretamente ou km/dia x dias/semana x semanas por mês. */
 
 export function calculateMonthlyKm(usage: UsageInput): number {
+  if (usage.monthlyKmOverride !== null) return usage.monthlyKmOverride
 
-if (usage.monthlyKmOverride !== null) return usage.monthlyKmOverride
-
-return usage.kmPerDay * usage.daysPerWeek * WEEKS_PER_MONTH
-
+  return usage.kmPerDay * usage.daysPerWeek * WEEKS_PER_MONTH
 }

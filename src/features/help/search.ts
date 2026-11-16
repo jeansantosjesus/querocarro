@@ -1,106 +1,74 @@
 import { HELP_ARTICLES, type HelpArticle, type HelpSection } from '../../config/help'
 
-
-
 export interface HelpSearchHit {
+  slug: HelpArticle['slug']
 
-slug: HelpArticle['slug']
+  title: string
 
-title: string
+  sectionId: string | null
 
-sectionId: string | null
+  sectionTitle: string | null
 
-sectionTitle: string | null
-
-snippet: string
-
+  snippet: string
 }
-
-
 
 const MIN_TERM_LENGTH = 2
 
 const SNIPPET_LENGTH = 180
 
-
-
 /** Minúsculas e sem acento, para "financiamento" casar com "Financiamento". */
 
 export function normalizeSearchText(value: string): string {
+  return value
 
-return value
+    .normalize('NFD')
 
-.normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
 
-.replace(/[\u0300-\u036f]/g, '')
-
-.toLowerCase()
-
+    .toLowerCase()
 }
-
-
 
 function sectionStrings(section: HelpSection): string[] {
+  return [
+    section.title,
 
-return [
+    ...section.paragraphs,
 
-section.title,
+    ...(section.formulas ?? []),
 
-...section.paragraphs,
-
-...(section.formulas ?? []),
-
-...(section.items ?? []),
-
-]
-
+    ...(section.items ?? []),
+  ]
 }
-
-
 
 function articleStrings(article: HelpArticle): string[] {
+  return [
+    article.title,
 
-return [
+    article.summary,
 
-article.title,
+    article.keywords.join(' '),
 
-article.summary,
+    article.usage,
 
-article.keywords.join(' '),
+    ...article.sources,
 
-article.usage,
-
-...article.sources,
-
-...article.limitations,
-
-]
-
+    ...article.limitations,
+  ]
 }
-
-
 
 function containsAll(texts: readonly string[], terms: readonly string[]): boolean {
+  const haystack = normalizeSearchText(texts.join(' \n '))
 
-const haystack = normalizeSearchText(texts.join(' \n '))
-
-return terms.every((term) => haystack.includes(term))
-
+  return terms.every((term) => haystack.includes(term))
 }
-
-
 
 function snippetFor(texts: readonly string[], terms: readonly string[]): string {
+  const first = terms[0] ?? ''
 
-const first = terms[0] ?? ''
+  const text = texts.find((item) => normalizeSearchText(item).includes(first)) ?? texts[0] ?? ''
 
-const text = texts.find((item) => normalizeSearchText(item).includes(first)) ?? texts[0] ?? ''
-
-return text.length > SNIPPET_LENGTH ? `${text.slice(0, SNIPPET_LENGTH).trimEnd()}…` : text
-
+  return text.length > SNIPPET_LENGTH ? `${text.slice(0, SNIPPET_LENGTH).trimEnd()}…` : text
 }
-
-
 
 /**
 
@@ -111,63 +79,44 @@ return text.length > SNIPPET_LENGTH ? `${text.slice(0, SNIPPET_LENGTH).trimEnd()
 */
 
 export function searchHelp(
+  query: string,
 
-query: string,
-
-articles: readonly HelpArticle[] = HELP_ARTICLES,
-
+  articles: readonly HelpArticle[] = HELP_ARTICLES,
 ): HelpSearchHit[] {
+  const terms = normalizeSearchText(query)
+    .trim()
 
-const terms = normalizeSearchText(query)
+    .split(/\s+/)
 
-.trim()
+    .filter((term) => term.length >= MIN_TERM_LENGTH)
 
-.split(/\s+/)
+  if (terms.length === 0) return []
 
-.filter((term) => term.length >= MIN_TERM_LENGTH)
+  const hits: HelpSearchHit[] = []
 
-if (terms.length === 0) return []
+  for (const article of articles) {
+    const everything = [...articleStrings(article), ...article.sections.flatMap(sectionStrings)]
 
+    if (!containsAll(everything, terms)) continue
 
+    const section =
+      article.sections.find((item) => containsAll(sectionStrings(item), terms)) ??
+      article.sections.find((item) => containsAll(sectionStrings(item), [terms[0] ?? '']))
 
-const hits: HelpSearchHit[] = []
+    hits.push({
+      slug: article.slug,
 
-for (const article of articles) {
+      title: article.title,
 
-const everything = [...articleStrings(article), ...article.sections.flatMap(sectionStrings)]
+      sectionId: section?.id ?? null,
 
-if (!containsAll(everything, terms)) continue
+      sectionTitle: section?.title ?? null,
 
+      snippet: section
+        ? snippetFor(sectionStrings(section), terms)
+        : snippetFor(articleStrings(article), terms),
+    })
+  }
 
-
-const section =
-
-article.sections.find((item) => containsAll(sectionStrings(item), terms)) ??
-
-article.sections.find((item) => containsAll(sectionStrings(item), [terms[0] ?? '']))
-
-
-
-hits.push({
-
-slug: article.slug,
-
-title: article.title,
-
-sectionId: section?.id ?? null,
-
-sectionTitle: section?.title ?? null,
-
-snippet: section
-
-? snippetFor(sectionStrings(section), terms)
-
-: snippetFor(articleStrings(article), terms),
-
-})
-
-}
-
-return hits
-
+  return hits
 }

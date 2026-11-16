@@ -1,54 +1,32 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 import {
-
-preferencesRowSchema,
-
-migrateStoredSimulationRow,
-
-profileRowSchema,
-
-savedResultRowSchema,
-
-simulationRowSchema,
-
-simulationSummaryRowSchema,
-
+  preferencesRowSchema,
+  migrateStoredSimulationRow,
+  profileRowSchema,
+  savedResultRowSchema,
+  simulationRowSchema,
+  simulationSummaryRowSchema,
 } from '../schemas/history'
 
 import type {
-
-SavedResultItem,
-
-SavedSimulation,
-
-SimulationDraft,
-
-UserPreferences,
-
-UserProfile,
-
+  SavedResultItem,
+  SavedSimulation,
+  SimulationDraft,
+  UserPreferences,
+  UserProfile,
 } from '../types/history'
 
 import type { RankedVehicle } from '../types/decision'
 
 import {
-
-ConsentRequiredError,
-
-RepositoryError,
-
-type PreferencesRepository,
-
-type ProfileRepository,
-
-type Repositories,
-
-type SimulationRepository,
-
+  ConsentRequiredError,
+  RepositoryError,
+  type PreferencesRepository,
+  type ProfileRepository,
+  type Repositories,
+  type SimulationRepository,
 } from './types'
-
-
 
 /**
 
@@ -61,462 +39,365 @@ type SimulationRepository,
 */
 
 export function createSupabaseRepositories(client: SupabaseClient): Repositories {
+  async function currentUserId(): Promise<string> {
+    const { data, error } = await client.auth.getUser()
 
-async function currentUserId(): Promise<string> {
+    if (error || !data.user) throw new RepositoryError('Sessão inválida ou expirada.')
 
-const { data, error } = await client.auth.getUser()
+    return data.user.id
+  }
 
-if (error || !data.user) throw new RepositoryError('Sessão inválida ou expirada.')
+  const simulations: SimulationRepository = {
+    async list() {
+      const { data, error } = await client
 
-return data.user.id
+        .from('simulations')
 
-}
+        .select(
+          'id,title,scenario_id,created_at,fipe_reference_month,fipe_reference_month_label,simulation_results(count)',
+        )
 
+        .order('created_at', { ascending: false })
 
+        .limit(200)
 
-const simulations: SimulationRepository = {
+      if (error) throw new RepositoryError('Não foi possível carregar o histórico.')
 
-async list() {
+      return (data ?? []).flatMap((row) => {
+        const parsed = simulationSummaryRowSchema.safeParse(row)
 
-const { data, error } = await client
+        if (!parsed.success) return []
 
-.from('simulations')
+        const r = parsed.data
 
-.select(
+        return [
+          {
+            id: r.id,
 
-'id,title,scenario_id,created_at,fipe_reference_month,fipe_reference_month_label,simulation_results(count)',
+            title: r.title,
 
-)
+            scenarioId: r.scenario_id,
 
-.order('created_at', { ascending: false })
+            createdAt: r.created_at,
 
-.limit(200)
+            fipeReferenceMonth: r.fipe_reference_month,
 
-if (error) throw new RepositoryError('Não foi possível carregar o histórico.')
+            fipeReferenceMonthLabel: r.fipe_reference_month_label,
 
-return (data ?? []).flatMap((row) => {
+            resultCount: r.simulation_results?.[0]?.count ?? 0,
+          },
+        ]
+      })
+    },
 
-const parsed = simulationSummaryRowSchema.safeParse(row)
+    async get(id) {
+      const { data: row, error } = await client
 
-if (!parsed.success) return []
+        .from('simulations')
 
-const r = parsed.data
+        .select('*')
 
-return [
+        .eq('id', id)
 
-{
+        .maybeSingle()
 
-id: r.id,
+      if (error) throw new RepositoryError('Não foi possível abrir a simulação.')
 
-title: r.title,
+      if (!row) return null
 
-scenarioId: r.scenario_id,
+      const parsed = simulationRowSchema.safeParse(migrateStoredSimulationRow(row))
 
-createdAt: r.created_at,
+      if (!parsed.success)
+        throw new RepositoryError('Registro de simulação em formato incompatível.')
 
-fipeReferenceMonth: r.fipe_reference_month,
+      const { data: resultRows, error: resultsError } = await client
 
-fipeReferenceMonthLabel: r.fipe_reference_month_label,
+        .from('simulation_results')
 
-resultCount: r.simulation_results?.[0]?.count ?? 0,
+        .select(
+          'vehicle_fipe_code,vehicle_year_id,compatibility_index,in_recommended_group,rank,payload',
+        )
 
-},
+        .eq('simulation_id', id)
 
-]
+        .order('rank', { ascending: true })
 
-})
+      if (resultsError) throw new RepositoryError('Não foi possível carregar os resultados.')
 
-},
+      const results: SavedResultItem[] = (resultRows ?? []).flatMap((resultRow) => {
+        const result = savedResultRowSchema.safeParse(resultRow)
 
+        if (!result.success) return []
 
+        return [
+          {
+            vehicleFipeCode: result.data.vehicle_fipe_code,
 
-async get(id) {
+            vehicleYearId: result.data.vehicle_year_id,
 
-const { data: row, error } = await client
+            compatibilityIndex: result.data.compatibility_index,
 
-.from('simulations')
+            inRecommendedGroup: result.data.in_recommended_group,
 
-.select('*')
+            rank: result.data.rank,
 
-.eq('id', id)
+            payload: result.data.payload as unknown as RankedVehicle,
+          },
+        ]
+      })
 
-.maybeSingle()
+      const r = parsed.data
 
-if (error) throw new RepositoryError('Não foi possível abrir a simulação.')
+      const simulation: SavedSimulation = {
+        id: r.id,
 
-if (!row) return null
+        createdAt: r.created_at,
 
-const parsed = simulationRowSchema.safeParse(migrateStoredSimulationRow(row))
+        title: r.title,
 
-if (!parsed.success)
+        scenarioId: r.scenario_id,
 
-throw new RepositoryError('Registro de simulação em formato incompatível.')
+        inputs: r.inputs,
 
+        weights: r.weights,
 
+        scenarioSnapshot: r.scenario_snapshot,
 
-const { data: resultRows, error: resultsError } = await client
+        fipeReferenceMonth: r.fipe_reference_month,
 
-.from('simulation_results')
+        fipeReferenceMonthLabel: r.fipe_reference_month_label,
 
-.select(
+        catalogVersion: r.catalog_version,
 
-'vehicle_fipe_code,vehicle_year_id,compatibility_index,in_recommended_group,rank,payload',
+        results,
+      }
 
-)
+      return simulation
+    },
 
-.eq('simulation_id', id)
+    async save(draft: SimulationDraft) {
+      const userId = await currentUserId()
 
-.order('rank', { ascending: true })
+      const { data: prefs } = await client
 
-if (resultsError) throw new RepositoryError('Não foi possível carregar os resultados.')
+        .from('user_preferences')
 
+        .select('persist_history_consent')
 
+        .eq('user_id', userId)
 
-const results: SavedResultItem[] = (resultRows ?? []).flatMap((resultRow) => {
+        .maybeSingle()
 
-const result = savedResultRowSchema.safeParse(resultRow)
+      if (!prefs || prefs.persist_history_consent !== true) throw new ConsentRequiredError()
 
-if (!result.success) return []
+      const { data: inserted, error } = await client
 
-return [
+        .from('simulations')
 
-{
+        .insert({
+          user_id: userId,
 
-vehicleFipeCode: result.data.vehicle_fipe_code,
+          title: draft.title,
 
-vehicleYearId: result.data.vehicle_year_id,
+          scenario_id: draft.scenarioId,
 
-compatibilityIndex: result.data.compatibility_index,
+          inputs: draft.inputs,
 
-inRecommendedGroup: result.data.in_recommended_group,
+          weights: draft.weights,
 
-rank: result.data.rank,
+          scenario_snapshot: draft.scenarioSnapshot,
 
-payload: result.data.payload as unknown as RankedVehicle,
+          fipe_reference_month: draft.fipeReferenceMonth,
 
-},
+          fipe_reference_month_label: draft.fipeReferenceMonthLabel,
 
-]
+          catalog_version: draft.catalogVersion,
 
-})
+          model_version: draft.scenarioSnapshot.modelVersion,
+        })
 
+        .select('id,created_at')
 
+        .single()
 
-const r = parsed.data
+      if (error || !inserted) throw new RepositoryError('Não foi possível salvar a simulação.')
 
-const simulation: SavedSimulation = {
+      const { error: resultsError } = await client.from('simulation_results').insert(
+        draft.results.map((item) => ({
+          simulation_id: inserted.id as string,
 
-id: r.id,
+          user_id: userId,
 
-createdAt: r.created_at,
+          vehicle_fipe_code: item.vehicleFipeCode,
 
-title: r.title,
+          vehicle_year_id: item.vehicleYearId,
 
-scenarioId: r.scenario_id,
+          compatibility_index: Number(item.compatibilityIndex.toFixed(2)),
 
-inputs: r.inputs,
+          in_recommended_group: item.inRecommendedGroup,
 
-weights: r.weights,
+          rank: item.rank,
 
-scenarioSnapshot: r.scenario_snapshot,
+          payload: item.payload,
+        })),
+      )
 
-fipeReferenceMonth: r.fipe_reference_month,
+      if (resultsError) {
+        // Sem transação no cliente: desfaz a simulação criada para não deixar registro parcial.
 
-fipeReferenceMonthLabel: r.fipe_reference_month_label,
+        await client
 
-catalogVersion: r.catalog_version,
+          .from('simulations')
 
-results,
+          .delete()
 
-}
+          .eq('id', inserted.id as string)
 
-return simulation
+        throw new RepositoryError('Não foi possível salvar os resultados da simulação.')
+      }
 
-},
+      return { ...draft, id: inserted.id as string, createdAt: inserted.created_at as string }
+    },
 
+    async remove(id) {
+      const { error } = await client.from('simulations').delete().eq('id', id)
 
+      if (error) throw new RepositoryError('Não foi possível excluir a simulação.')
+    },
 
-async save(draft: SimulationDraft) {
+    async removeAll() {
+      const userId = await currentUserId()
 
-const userId = await currentUserId()
+      const { error } = await client.from('simulations').delete().eq('user_id', userId)
 
+      if (error) throw new RepositoryError('Não foi possível excluir o histórico.')
+    },
+  }
 
+  const profile: ProfileRepository = {
+    async get() {
+      const userId = await currentUserId()
 
-const { data: prefs } = await client
+      const { data, error } = await client
 
-.from('user_preferences')
+        .from('profiles')
 
-.select('persist_history_consent')
+        .select('*')
 
-.eq('user_id', userId)
+        .eq('id', userId)
 
-.maybeSingle()
+        .maybeSingle()
 
-if (!prefs || prefs.persist_history_consent !== true) throw new ConsentRequiredError()
+      if (error) throw new RepositoryError('Não foi possível carregar o perfil.')
 
+      if (!data) return null
 
+      const parsed = profileRowSchema.safeParse(data)
 
-const { data: inserted, error } = await client
+      if (!parsed.success) throw new RepositoryError('Perfil em formato incompatível.')
 
-.from('simulations')
+      return {
+        id: parsed.data.id,
 
-.insert({
+        displayName: parsed.data.display_name,
 
-user_id: userId,
+        privacyAcceptedAt: parsed.data.privacy_accepted_at,
+      }
+    },
 
-title: draft.title,
+    async upsert({ displayName, privacyAcceptedAt }) {
+      const userId = await currentUserId()
 
-scenario_id: draft.scenarioId,
+      const { data, error } = await client
 
-inputs: draft.inputs,
+        .from('profiles')
 
-weights: draft.weights,
+        .upsert({ id: userId, display_name: displayName, privacy_accepted_at: privacyAcceptedAt })
 
-scenario_snapshot: draft.scenarioSnapshot,
+        .select('*')
 
-fipe_reference_month: draft.fipeReferenceMonth,
+        .single()
 
-fipe_reference_month_label: draft.fipeReferenceMonthLabel,
+      if (error || !data) throw new RepositoryError('Não foi possível salvar o perfil.')
 
-catalog_version: draft.catalogVersion,
+      const parsed = profileRowSchema.parse(data)
 
-model_version: draft.scenarioSnapshot.modelVersion,
+      const result: UserProfile = {
+        id: parsed.id,
 
-})
+        displayName: parsed.display_name,
 
-.select('id,created_at')
+        privacyAcceptedAt: parsed.privacy_accepted_at,
+      }
 
-.single()
+      return result
+    },
+    async deleteMyData() {
+      const userId = await currentUserId()
 
-if (error || !inserted) throw new RepositoryError('Não foi possível salvar a simulação.')
+      await client.from('simulations').delete().eq('user_id', userId)
 
+      await client.from('user_preferences').delete().eq('user_id', userId)
 
+      await client.from('profiles').delete().eq('id', userId)
+    },
 
-const { error: resultsError } = await client.from('simulation_results').insert(
+    async deleteAccount() {
+      const { error } = await client.rpc('delete_my_account')
 
-draft.results.map((item) => ({
+      if (error) throw new RepositoryError('Não foi possível excluir a conta.')
+    },
+  }
 
-simulation_id: inserted.id as string,
+  const preferences: PreferencesRepository = {
+    async get() {
+      const userId = await currentUserId()
 
-user_id: userId,
+      const { data, error } = await client
 
-vehicle_fipe_code: item.vehicleFipeCode,
+        .from('user_preferences')
 
-vehicle_year_id: item.vehicleYearId,
+        .select('persist_history_consent,default_scenario')
 
-compatibility_index: Number(item.compatibilityIndex.toFixed(2)),
+        .eq('user_id', userId)
 
-in_recommended_group: item.inRecommendedGroup,
+        .maybeSingle()
 
-rank: item.rank,
+      if (error) throw new RepositoryError('Não foi possível carregar as preferências.')
 
-payload: item.payload,
+      if (!data) return { persistHistoryConsent: false, defaultScenario: null }
 
-})),
+      const parsed = preferencesRowSchema.safeParse(data)
 
-)
+      if (!parsed.success) return { persistHistoryConsent: false, defaultScenario: null }
 
-if (resultsError) {
+      return {
+        persistHistoryConsent: parsed.data.persist_history_consent,
 
-// Sem transação no cliente: desfaz a simulação criada para não deixar registro parcial.
+        defaultScenario: parsed.data.default_scenario,
+      }
+    },
 
-await client
+    async update(patch) {
+      const userId = await currentUserId()
 
-.from('simulations')
+      const current = await preferences.get()
 
-.delete()
+      const next: UserPreferences = { ...current, ...patch }
 
-.eq('id', inserted.id as string)
+      const { error } = await client.from('user_preferences').upsert({
+        user_id: userId,
 
-throw new RepositoryError('Não foi possível salvar os resultados da simulação.')
+        persist_history_consent: next.persistHistoryConsent,
 
-}
+        default_scenario: next.defaultScenario,
+      })
 
+      if (error) throw new RepositoryError('Não foi possível salvar as preferências.')
 
+      return next
+    },
+  }
 
-return { ...draft, id: inserted.id as string, createdAt: inserted.created_at as string }
-
-},
-
-
-
-async remove(id) {
-
-const { error } = await client.from('simulations').delete().eq('id', id)
-
-if (error) throw new RepositoryError('Não foi possível excluir a simulação.')
-
-},
-
-
-
-async removeAll() {
-
-const userId = await currentUserId()
-
-const { error } = await client.from('simulations').delete().eq('user_id', userId)
-
-if (error) throw new RepositoryError('Não foi possível excluir o histórico.')
-
-},
-
-}
-
-
-
-const profile: ProfileRepository = {
-
-async get() {
-
-const userId = await currentUserId()
-
-const { data, error } = await client
-
-.from('profiles')
-
-.select('*')
-
-.eq('id', userId)
-
-.maybeSingle()
-
-if (error) throw new RepositoryError('Não foi possível carregar o perfil.')
-
-if (!data) return null
-
-const parsed = profileRowSchema.safeParse(data)
-
-if (!parsed.success) throw new RepositoryError('Perfil em formato incompatível.')
-
-return {
-
-id: parsed.data.id,
-
-displayName: parsed.data.display_name,
-
-privacyAcceptedAt: parsed.data.privacy_accepted_at,
-
-}
-
-},
-
-async upsert({ displayName, privacyAcceptedAt }) {
-
-const userId = await currentUserId()
-
-const { data, error } = await client
-
-.from('profiles')
-
-.upsert({ id: userId, display_name: displayName, privacy_accepted_at: privacyAcceptedAt })
-
-.select('*')
-
-.single()
-
-if (error || !data) throw new RepositoryError('Não foi possível salvar o perfil.')
-
-const parsed = profileRowSchema.parse(data)
-
-const result: UserProfile = {
-
-id: parsed.id,
-
-displayName: parsed.display_name,
-
-privacyAcceptedAt: parsed.privacy_accepted_at,
-
-}
-
-return result
-
-},
-async deleteMyData() {
-
-const userId = await currentUserId()
-
-await client.from('simulations').delete().eq('user_id', userId)
-
-await client.from('user_preferences').delete().eq('user_id', userId)
-
-await client.from('profiles').delete().eq('id', userId)
-
-},
-
-async deleteAccount() {
-
-const { error } = await client.rpc('delete_my_account')
-
-if (error) throw new RepositoryError('Não foi possível excluir a conta.')
-
-},
-
-}
-
-
-
-const preferences: PreferencesRepository = {
-
-async get() {
-
-const userId = await currentUserId()
-
-const { data, error } = await client
-
-.from('user_preferences')
-
-.select('persist_history_consent,default_scenario')
-
-.eq('user_id', userId)
-
-.maybeSingle()
-
-if (error) throw new RepositoryError('Não foi possível carregar as preferências.')
-
-if (!data) return { persistHistoryConsent: false, defaultScenario: null }
-
-const parsed = preferencesRowSchema.safeParse(data)
-
-if (!parsed.success) return { persistHistoryConsent: false, defaultScenario: null }
-
-return {
-
-persistHistoryConsent: parsed.data.persist_history_consent,
-
-defaultScenario: parsed.data.default_scenario,
-
-}
-
-},
-
-async update(patch) {
-
-const userId = await currentUserId()
-
-const current = await preferences.get()
-
-const next: UserPreferences = { ...current, ...patch }
-
-const { error } = await client.from('user_preferences').upsert({
-
-user_id: userId,
-
-persist_history_consent: next.persistHistoryConsent,
-
-default_scenario: next.defaultScenario,
-
-})
-
-if (error) throw new RepositoryError('Não foi possível salvar as preferências.')
-
-return next
-
-},
-
-}
-
-
-
-return { simulations, profile, preferences }
-
+  return { simulations, profile, preferences }
 }

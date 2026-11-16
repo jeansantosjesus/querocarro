@@ -347,4 +347,4 @@ export function clusterVehicles(inputs: readonly ClusterInput[]): ClusteringResu
     },
     assignments,
   }
-                                                                                 }
+}

@@ -20,212 +20,140 @@ import { PasswordRequirements } from '../features/auth/PasswordRequirements'
 
 import { resetPasswordSchema, type ResetPasswordValues } from '../schemas/auth'
 
-
-
 export function ResetPasswordPage() {
+  const { status, recovery, updatePassword } = useAuth()
 
-const { status, recovery, updatePassword } = useAuth()
+  const navigate = useNavigate()
 
-const navigate = useNavigate()
+  const [formError, setFormError] = useState<string | null>(null)
 
-const [formError, setFormError] = useState<string | null>(null)
+  const [done, setDone] = useState(false)
 
-const [done, setDone] = useState(false)
+  const {
+    register,
 
+    handleSubmit,
 
+    control,
 
-const {
+    formState: { errors, isSubmitting },
+  } = useForm<ResetPasswordValues>({
+    resolver: zodResolver(resetPasswordSchema),
 
-register,
+    defaultValues: { password: '', confirmPassword: '' },
+  })
 
-handleSubmit,
+  const password = useWatch({ control, name: 'password' }) ?? ''
 
-control,
+  if (status === 'loading') return <Spinner label="Validando o link…" />
 
-formState: { errors, isSubmitting },
+  // Sem sessão de recuperação, o link é inválido ou expirou.
 
-} = useForm<ResetPasswordValues>({
+  if (status !== 'authenticated' && !done) {
+    return (
+      <div className="mx-auto max-w-lg">
+        <PageTitle title="Link inválido ou expirado" />
 
-resolver: zodResolver(resetPasswordSchema),
+        <Alert tone="warn">
+          Não foi possível validar o link de redefinição. Solicite um novo para continuar.
+        </Alert>
 
-defaultValues: { password: '', confirmPassword: '' },
+        <p className="mt-6">
+          <Link to="/recuperar-senha" className="qc-btn-primary">
+            Solicitar novo link
+          </Link>
+        </p>
+      </div>
+    )
+  }
 
-})
+  async function onSubmit(values: ResetPasswordValues) {
+    setFormError(null)
 
-const password = useWatch({ control, name: 'password' }) ?? ''
+    const result = await updatePassword(values.password)
 
+    if (!result.ok) {
+      setFormError(result.message)
 
+      return
+    }
 
-if (status === 'loading') return <Spinner label="Validando o link…" />
+    setDone(true)
+  }
 
+  if (done) {
+    return (
+      <div className="mx-auto max-w-lg">
+        <PageTitle title="Senha atualizada" />
 
+        <Alert tone="good">Sua senha foi alterada com sucesso.</Alert>
 
-// Sem sessão de recuperação, o link é inválido ou expirou.
+        <p className="mt-6">
+          <button
+            type="button"
 
-if (status !== 'authenticated' && !done) {
+            className="qc-btn-primary"
 
-return (
+            onClick={() => navigate('/painel', { replace: true })}
+          >
+            Ir para o painel
+          </button>
+        </p>
+      </div>
+    )
+  }
 
-<div className="mx-auto max-w-lg">
+  return (
+    <div className="mx-auto max-w-lg">
+      <PageTitle
+        title={recovery ? 'Definir nova senha' : 'Alterar senha'}
 
-<PageTitle title="Link inválido ou expirado" />
+        subtitle="Escolha uma senha forte que você não use em outros serviços."
+      />
 
-<Alert tone="warn">
+      <form onSubmit={handleSubmit(onSubmit)} noValidate className="qc-card space-y-5 p-6">
+        {formError ? <Alert tone="bad">{formError}</Alert> : null}
 
-Não foi possível validar o link de redefinição. Solicite um novo para continuar.
+        <Field label="Nova senha" required error={errors.password?.message}>
+          {(props) => (
+            <>
+              <input
+                {...props}
 
-</Alert>
+                type="password"
 
-<p className="mt-6">
+                className="qc-input"
 
-<Link to="/recuperar-senha" className="qc-btn-primary">
+                autoComplete="new-password"
 
-Solicitar novo link
+                {...register('password')}
+              />
 
-</Link>
+              <PasswordRequirements password={password} id="reset-password-requirements" />
+            </>
+          )}
+        </Field>
 
-</p>
+        <Field label="Confirmar nova senha" required error={errors.confirmPassword?.message}>
+          {(props) => (
+            <input
+              {...props}
 
-</div>
+              type="password"
 
-)
+              className="qc-input"
 
-}
+              autoComplete="new-password"
 
+              {...register('confirmPassword')}
+            />
+          )}
+        </Field>
 
-
-async function onSubmit(values: ResetPasswordValues) {
-
-setFormError(null)
-
-const result = await updatePassword(values.password)
-
-if (!result.ok) {
-
-setFormError(result.message)
-
-return
-
-}
-
-setDone(true)
-
-}
-
-
-
-if (done) {
-
-return (
-
-<div className="mx-auto max-w-lg">
-
-<PageTitle title="Senha atualizada" />
-
-<Alert tone="good">Sua senha foi alterada com sucesso.</Alert>
-
-<p className="mt-6">
-
-<button
-
-type="button"
-
-className="qc-btn-primary"
-
-onClick={() => navigate('/painel', { replace: true })}
-
->
-
-Ir para o painel
-
-</button>
-
-</p>
-
-</div>
-
-)
-
-}
-
-
-
-return (
-
-<div className="mx-auto max-w-lg">
-
-<PageTitle
-
-title={recovery ? 'Definir nova senha' : 'Alterar senha'}
-
-subtitle="Escolha uma senha forte que você não use em outros serviços."
-
-/>
-
-<form onSubmit={handleSubmit(onSubmit)} noValidate className="qc-card space-y-5 p-6">
-
-{formError ? <Alert tone="bad">{formError}</Alert> : null}
-
-<Field label="Nova senha" required error={errors.password?.message}>
-
-{(props) => (
-
-<>
-
-<input
-
-{...props}
-
-type="password"
-
-className="qc-input"
-
-autoComplete="new-password"
-
-{...register('password')}
-
-/>
-
-<PasswordRequirements password={password} id="reset-password-requirements" />
-
-</>
-
-)}
-
-</Field>
-
-<Field label="Confirmar nova senha" required error={errors.confirmPassword?.message}>
-
-{(props) => (
-
-<input
-
-{...props}
-
-type="password"
-
-className="qc-input"
-
-autoComplete="new-password"
-
-{...register('confirmPassword')}
-
-/>
-
-)}
-
-</Field>
-
-<button type="submit" className="qc-btn-primary w-full" disabled={isSubmitting}>
-
-{isSubmitting ? 'Salvando…' : 'Salvar nova senha'}
-
-</button>
-
-</form>
-
-</div>
-
-)
-
+        <button type="submit" className="qc-btn-primary w-full" disabled={isSubmitting}>
+          {isSubmitting ? 'Salvando…' : 'Salvar nova senha'}
+        </button>
+      </form>
+    </div>
+  )
 }

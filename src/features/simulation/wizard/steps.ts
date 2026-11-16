@@ -2,150 +2,120 @@ import type { FieldPath } from 'react-hook-form'
 
 import type { SimulationInput } from '../../../schemas/simulation'
 
-
-
 export type WizardStepId =
-
-| 'objetivo'
-
-| 'financas'
-
-| 'uso'
-
-| 'preferencias'
-
-| 'pesos'
-
-| 'revisao'
-
-| 'processamento'
-
-| 'resultado'
-
-
+  | 'objetivo'
+  | 'financas'
+  | 'uso'
+  | 'preferencias'
+  | 'pesos'
+  | 'revisao'
+  | 'processamento'
+  | 'resultado'
 
 export interface WizardStep {
+  id: WizardStepId
 
-id: WizardStepId
+  title: string
 
-title: string
+  /** Campos validados antes de avançar. */
 
-/** Campos validados antes de avançar. */
-
-fields: FieldPath<SimulationInput>[]
-
+  fields: FieldPath<SimulationInput>[]
 }
 
-
-
 export const WIZARD_STEPS: readonly WizardStep[] = [
+  {
+    id: 'objetivo',
 
-{
+    title: 'Objetivo',
 
-id: 'objetivo',
+    fields: [
+      'objective.title',
 
-title: 'Objetivo',
+      'objective.scenarioId',
 
-fields: [
+      'objective.customMarginMultiplier',
 
-'objective.title',
+      'objective.purchaseMode',
 
-'objective.scenarioId',
+      'objective.condition',
 
-'objective.customMarginMultiplier',
+      'objective.maxPurchasePrice',
+    ],
+  },
 
-'objective.purchaseMode',
+  {
+    id: 'financas',
 
-'objective.condition',
+    title: 'Finanças',
 
-'objective.maxPurchasePrice',
+    fields: [
+      'registrationState',
 
-],
+      'allowDemonstrativeTax',
 
-},
+      'finance.netIncome',
 
-{
+      'finance.fixedExpenses',
 
-id: 'financas',
+      'finance.otherRecurringExpenses',
 
-title: 'Finanças',
+      'finance.otherDebts',
 
-fields: [
+      'finance.monthlyReserve',
 
-'registrationState',
+      'finance.downPayment',
 
-'allowDemonstrativeTax',
+      'finance.reserve',
 
-'finance.netIncome',
+      'finance.accumulatedReserve',
 
-'finance.fixedExpenses',
+      'finance.reserveMonths',
 
-'finance.otherRecurringExpenses',
+      'finance.safetyMarginMonthly',
 
-'finance.otherDebts',
+      'finance.limitMode',
 
-'finance.monthlyReserve',
+      'finance.vehicleSharePct',
 
-'finance.downPayment',
+      'finance.useFullDownPayment',
 
-'finance.reserve',
+      'finance.maxMonthlyVehicleSpend',
 
-'finance.accumulatedReserve',
+      'finance.installments',
 
-'finance.reserveMonths',
+      'finance.monthlyRatePct',
 
-'finance.safetyMarginMonthly',
+      'finance.maxInstallment',
+    ],
+  },
 
-'finance.limitMode',
+  {
+    id: 'uso',
 
-'finance.vehicleSharePct',
+    title: 'Uso',
 
-'finance.useFullDownPayment',
+    fields: [
+      'usage.type',
 
-'finance.maxMonthlyVehicleSpend',
+      'usage.kmPerDay',
 
-'finance.installments',
+      'usage.daysPerWeek',
 
-'finance.monthlyRatePct',
+      'usage.monthlyKmOverride',
 
-'finance.maxInstallment',
+      'usage.passengers',
 
-],
+      'usage.trunkNeed',
+    ],
+  },
 
-},
+  { id: 'preferencias', title: 'Preferências', fields: ['preferences'] },
 
-{
+  { id: 'pesos', title: 'Pesos', fields: ['weights'] },
 
-id: 'uso',
+  { id: 'revisao', title: 'Revisão', fields: ['assumptionOverrides'] },
 
-title: 'Uso',
+  { id: 'processamento', title: 'Processamento', fields: [] },
 
-fields: [
-
-'usage.type',
-
-'usage.kmPerDay',
-
-'usage.daysPerWeek',
-
-'usage.monthlyKmOverride',
-
-'usage.passengers',
-
-'usage.trunkNeed',
-
-],
-
-},
-
-{ id: 'preferencias', title: 'Preferências', fields: ['preferences'] },
-
-{ id: 'pesos', title: 'Pesos', fields: ['weights'] },
-
-{ id: 'revisao', title: 'Revisão', fields: ['assumptionOverrides'] },
-
-{ id: 'processamento', title: 'Processamento', fields: [] },
-
-{ id: 'resultado', title: 'Resultado', fields: [] },
-
+  { id: 'resultado', title: 'Resultado', fields: [] },
 ] as const

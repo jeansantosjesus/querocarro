@@ -3,728 +3,531 @@ import { DEFAULT_ASSUMPTIONS } from '../../config/assumptions'
 import { SCENARIOS } from '../../config/scenarios'
 
 import {
-
-calculateInverseOptions,
-
-isDominated,
-
-type InverseCandidate,
-
-type InverseRequest,
-
+  calculateInverseOptions,
+  isDominated,
+  type InverseCandidate,
+  type InverseRequest,
 } from '../../domain/finance/inverse'
 
 import { makeInput, makeVehicle, REFERENCE_YEAR } from '../fixtures/factories'
 
-
-
 function makeRequest(patch: Partial<InverseRequest> = {}): InverseRequest {
+  const input = makeInput()
 
-const input = makeInput()
+  return {
+    vehicle: makeVehicle({ priceBRL: 60000 }),
 
-return {
+    registrationState: 'BA',
 
-vehicle: makeVehicle({ priceBRL: 60000 }),
+    condition: 'indiferente',
 
-registrationState: 'BA',
+    usage: input.usage,
 
-condition: 'indiferente',
+    fuelPreference: 'indiferente',
 
-usage: input.usage,
+    assumptions: DEFAULT_ASSUMPTIONS,
 
-fuelPreference: 'indiferente',
+    scenario: SCENARIOS.equilibrado,
 
-assumptions: DEFAULT_ASSUMPTIONS,
+    referenceYear: REFERENCE_YEAR,
 
-scenario: SCENARIOS.equilibrado,
+    horizonMonths: 36,
 
-referenceYear: REFERENCE_YEAR,
+    allowDemonstrativeTax: true,
 
-horizonMonths: 36,
+    finance: { ...input.finance, maxInstallment: null },
 
-allowDemonstrativeTax: true,
+    hasIncome: true,
 
-finance: { ...input.finance, maxInstallment: null },
+    purchaseModes: ['financiado', 'avista'],
 
-hasIncome: true,
+    amortization: 'price',
 
-purchaseModes: ['financiado', 'avista'],
+    installmentOptions: [12, 36, 48],
 
-amortization: 'price',
+    downPaymentOptions: [0, 12000, 30000],
 
-installmentOptions: [12, 36, 48],
+    maxDownPayment: null,
 
-downPaymentOptions: [0, 12000, 30000],
+    maxMonthlyTotal: null,
 
-maxDownPayment: null,
+    personalized: null,
 
-maxMonthlyTotal: null,
-
-personalized: null,
-
-...patch,
-
+    ...patch,
+  }
 }
-
-}
-
-
 
 function candidateOf(
+  result: ReturnType<typeof calculateInverseOptions>,
 
-result: ReturnType<typeof calculateInverseOptions>,
-
-id: string,
-
+  id: string,
 ): InverseCandidate {
+  const found = result.candidates.find((candidate) => candidate.id === id)
 
-const found = result.candidates.find((candidate) => candidate.id === id)
+  if (!found) throw new Error(`candidato ${id} não encontrado`)
 
-if (!found) throw new Error(`candidato ${id} não encontrado`)
-
-return found
-
+  return found
 }
-
-
 
 function candidate(patch: Partial<InverseCandidate>): InverseCandidate {
+  return {
+    id: 'x',
 
-return {
+    purchaseMode: 'financiado',
 
-id: 'x',
+    amortization: 'price',
 
-purchaseMode: 'financiado',
+    downPayment: 0,
 
-amortization: 'price',
+    installments: 48,
 
-downPayment: 0,
+    financed: 0,
 
-installments: 48,
+    monthlyInstallment: 0,
 
-financed: 0,
+    monthlyTotal: 0,
 
-monthlyInstallment: 0,
+    interest: 0,
 
-monthlyTotal: 0,
+    tcoEconomic: 0,
 
-interest: 0,
+    tcoCash: 0,
 
-tcoEconomic: 0,
+    referenceIncome: null,
 
-tcoCash: 0,
+    reserveAfter: null,
 
-referenceIncome: null,
+    marginAfter: null,
 
-reserveAfter: null,
+    status: 'viavel',
 
-marginAfter: null,
+    reasons: [],
 
-status: 'viavel',
+    personalized: false,
 
-reasons: [],
-
-personalized: false,
-
-...patch,
-
+    ...patch,
+  }
 }
-
-}
-
-
 
 describe('simulação inversa: à vista e entrada', () => {
+  it('à vista não tem financiamento, prazo nem parcela', () => {
+    const result = calculateInverseOptions(
+      makeRequest({ purchaseModes: ['avista'], hasIncome: false }),
+    )
 
-it('à vista não tem financiamento, prazo nem parcela', () => {
+    const cash = result.candidates.find((item) => item.purchaseMode === 'avista')
 
-const result = calculateInverseOptions(
+    expect(cash).toBeDefined()
 
-makeRequest({ purchaseModes: ['avista'], hasIncome: false }),
+    expect(cash?.downPayment).toBe(60000)
 
-)
+    expect(cash?.installments).toBe(0)
 
-const cash = result.candidates.find((item) => item.purchaseMode === 'avista')
+    expect(cash?.financed).toBe(0)
 
-expect(cash).toBeDefined()
+    expect(cash?.monthlyInstallment).toBe(0)
 
-expect(cash?.downPayment).toBe(60000)
+    expect(result.scenarios.avista?.purchaseMode).toBe('avista')
+  })
 
-expect(cash?.installments).toBe(0)
+  it('à vista com renda: o preço inteiro usa a reserva protegida e é bloqueado sem autorização', () => {
+    // Entrada disponível fora da reserva: 30.000. Pagar 60.000 à vista passaria da reserva.
 
-expect(cash?.financed).toBe(0)
+    const result = calculateInverseOptions(makeRequest({ purchaseModes: ['avista'] }))
 
-expect(cash?.monthlyInstallment).toBe(0)
+    const cash = result.candidates.find((item) => item.purchaseMode === 'avista')
 
-expect(result.scenarios.avista?.purchaseMode).toBe('avista')
+    expect(cash?.status).toBe('inviavel')
 
+    expect(cash?.reasons.map((r) => r.code)).toContain('reserva_violada')
+
+    expect(result.scenarios.avista).toBeNull()
+  })
+
+  it('entrada igual ao valor não gera financiamento; a opção é à vista', () => {
+    const result = calculateInverseOptions(
+      makeRequest({
+        downPaymentOptions: [0, 60000],
+
+        purchaseModes: ['financiado', 'avista'],
+
+        hasIncome: false,
+      }),
+    )
+
+    const financedFullEntry = result.candidates.filter(
+      (item) => item.purchaseMode === 'financiado' && item.downPayment >= 60000,
+    )
+
+    expect(financedFullEntry).toHaveLength(0)
+
+    expect(result.scenarios.avista?.downPayment).toBe(60000)
+  })
+
+  it('entrada zero financia o preço inteiro', () => {
+    const result = calculateInverseOptions(
+      makeRequest({
+        downPaymentOptions: [0],
+
+        installmentOptions: [36],
+
+        purchaseModes: ['financiado'],
+      }),
+    )
+
+    const item = candidateOf(result, 'financiado:0:36')
+
+    expect(item.financed).toBe(60000)
+
+    expect(item.monthlyInstallment).toBeGreaterThan(0)
+  })
 })
-
-
-
-it('à vista com renda: o preço inteiro usa a reserva protegida e é bloqueado sem autorização', () => {
-
-// Entrada disponível fora da reserva: 30.000. Pagar 60.000 à vista passaria da reserva.
-
-const result = calculateInverseOptions(makeRequest({ purchaseModes: ['avista'] }))
-
-const cash = result.candidates.find((item) => item.purchaseMode === 'avista')
-
-expect(cash?.status).toBe('inviavel')
-
-expect(cash?.reasons.map((r) => r.code)).toContain('reserva_violada')
-
-expect(result.scenarios.avista).toBeNull()
-
-})
-
-
-
-it('entrada igual ao valor não gera financiamento; a opção é à vista', () => {
-
-const result = calculateInverseOptions(
-
-makeRequest({
-
-downPaymentOptions: [0, 60000],
-
-purchaseModes: ['financiado', 'avista'],
-
-hasIncome: false,
-
-}),
-
-)
-
-const financedFullEntry = result.candidates.filter(
-
-(item) => item.purchaseMode === 'financiado' && item.downPayment >= 60000,
-
-)
-
-expect(financedFullEntry).toHaveLength(0)
-
-expect(result.scenarios.avista?.downPayment).toBe(60000)
-
-})
-
-
-
-it('entrada zero financia o preço inteiro', () => {
-
-const result = calculateInverseOptions(
-
-makeRequest({
-
-downPaymentOptions: [0],
-
-installmentOptions: [36],
-
-purchaseModes: ['financiado'],
-
-}),
-
-)
-
-const item = candidateOf(result, 'financiado:0:36')
-
-expect(item.financed).toBe(60000)
-
-expect(item.monthlyInstallment).toBeGreaterThan(0)
-
-})
-
-})
-
-
 
 describe('simulação inversa: taxa, Price e SAC', () => {
+  it('taxa zero divide o financiado igualmente pelos prazos e não cobra juros', () => {
+    const result = calculateInverseOptions(
+      makeRequest({
+        downPaymentOptions: [0],
 
-it('taxa zero divide o financiado igualmente pelos prazos e não cobra juros', () => {
+        installmentOptions: [12],
 
-const result = calculateInverseOptions(
+        purchaseModes: ['financiado'],
 
-makeRequest({
+        finance: { ...makeInput().finance, monthlyRatePct: 0, maxInstallment: null },
+      }),
+    )
 
-downPaymentOptions: [0],
+    const item = candidateOf(result, 'financiado:0:12')
 
-installmentOptions: [12],
+    expect(item.monthlyInstallment).toBeCloseTo(60000 / 12, 2)
 
-purchaseModes: ['financiado'],
+    expect(item.interest).toBe(0)
+  })
 
-finance: { ...makeInput().finance, monthlyRatePct: 0, maxInstallment: null },
+  it('SAC começa com parcela maior que a Price e paga menos juros no total', () => {
+    const price = calculateInverseOptions(
+      makeRequest({
+        downPaymentOptions: [0],
 
-}),
+        installmentOptions: [48],
 
-)
+        purchaseModes: ['financiado'],
 
-const item = candidateOf(result, 'financiado:0:12')
+        hasIncome: false,
 
-expect(item.monthlyInstallment).toBeCloseTo(60000 / 12, 2)
+        amortization: 'price',
+      }),
+    )
 
-expect(item.interest).toBe(0)
+    const sac = calculateInverseOptions(
+      makeRequest({
+        downPaymentOptions: [0],
 
+        installmentOptions: [48],
+
+        purchaseModes: ['financiado'],
+
+        hasIncome: false,
+
+        amortization: 'sac',
+      }),
+    )
+
+    const priceItem = candidateOf(price, 'financiado:0:48')
+
+    const sacItem = candidateOf(sac, 'financiado:0:48')
+
+    expect(sacItem.amortization).toBe('sac')
+
+    expect(sacItem.monthlyInstallment).toBeGreaterThan(priceItem.monthlyInstallment)
+
+    expect(sacItem.interest ?? 0).toBeLessThan(priceItem.interest ?? 0)
+  })
 })
-
-
-
-it('SAC começa com parcela maior que a Price e paga menos juros no total', () => {
-
-const price = calculateInverseOptions(
-
-makeRequest({
-
-downPaymentOptions: [0],
-
-installmentOptions: [48],
-
-purchaseModes: ['financiado'],
-
-hasIncome: false,
-
-amortization: 'price',
-
-}),
-
-)
-
-const sac = calculateInverseOptions(
-
-makeRequest({
-
-downPaymentOptions: [0],
-
-installmentOptions: [48],
-
-purchaseModes: ['financiado'],
-
-hasIncome: false,
-
-amortization: 'sac',
-
-}),
-
-)
-
-const priceItem = candidateOf(price, 'financiado:0:48')
-
-const sacItem = candidateOf(sac, 'financiado:0:48')
-
-expect(sacItem.amortization).toBe('sac')
-
-expect(sacItem.monthlyInstallment).toBeGreaterThan(priceItem.monthlyInstallment)
-
-expect(sacItem.interest ?? 0).toBeLessThan(priceItem.interest ?? 0)
-
-})
-
-})
-
-
 
 describe('simulação inversa: renda, limites e ausência de solução', () => {
+  it('sem renda funciona e avisa que não há avaliação de orçamento', () => {
+    const result = calculateInverseOptions(
+      makeRequest({
+        hasIncome: false,
 
-it('sem renda funciona e avisa que não há avaliação de orçamento', () => {
+        finance: { ...makeInput().finance, netIncome: 0, maxInstallment: null },
+      }),
+    )
 
-const result = calculateInverseOptions(
+    expect(result.status).toBe('ok')
 
-makeRequest({
+    expect(
+      result.candidates.some((item) => item.reasons.some((r) => r.code.includes('renda'))),
+    ).toBe(false)
 
-hasIncome: false,
+    expect(result.premises.join(' ')).toContain('Sem renda informada')
 
-finance: { ...makeInput().finance, netIncome: 0, maxInstallment: null },
+    expect(result.scenarios.menorParcela).not.toBeNull()
+  })
 
-}),
+  it('renda insuficiente não recebe solução viável e explica o motivo', () => {
+    const result = calculateInverseOptions(
+      makeRequest({
+        finance: {
+          ...makeInput().finance,
 
-)
+          netIncome: 3000,
 
-expect(result.status).toBe('ok')
+          fixedExpenses: 2800,
 
-expect(
+          maxInstallment: null,
+        },
+      }),
+    )
 
-result.candidates.some((item) => item.reasons.some((r) => r.code.includes('renda'))),
+    expect(result.status).toBe('sem_solucao')
 
-).toBe(false)
+    expect(result.options).toHaveLength(0)
 
-expect(result.premises.join(' ')).toContain('Sem renda informada')
+    expect(result.candidates.every((item) => item.status !== 'viavel')).toBe(true)
 
-expect(result.scenarios.menorParcela).not.toBeNull()
+    expect(Object.keys(result.rejectionCounts).length).toBeGreaterThan(0)
 
+    expect(result.suggestions[0]).toMatch(/Nenhuma combinação/)
+  })
+
+  it('ausência de solução mantém todos os cenários vazios, sem esconder nada', () => {
+    const result = calculateInverseOptions(makeRequest({ maxMonthlyTotal: 100 }))
+
+    expect(result.status).toBe('sem_solucao')
+
+    expect(result.scenarios.menorEntrada).toBeNull()
+
+    expect(result.scenarios.menorParcela).toBeNull()
+
+    expect(result.scenarios.menorCustoTotal).toBeNull()
+
+    expect(result.scenarios.avista).toBeNull()
+
+    expect(result.suggestions.join(' ')).not.toMatch(/oculta|esconder|empréstimo adicional/i)
+  })
+
+  it('entrada acima do disponível é recusada com a diferença', () => {
+    const result = calculateInverseOptions(
+      makeRequest({
+        maxDownPayment: 12000,
+
+        downPaymentOptions: [30000],
+
+        purchaseModes: ['financiado'],
+      }),
+    )
+
+    const item = candidateOf(result, 'financiado:30000:36')
+
+    const reason = item.reasons.find((r) => r.code === 'entrada_acima_disponivel')
+
+    expect(reason?.gap).toBe(18000)
+  })
+
+  it('usar a reserva protegida sem autorização bloqueia a combinação', () => {
+    const result = calculateInverseOptions(
+      makeRequest({ downPaymentOptions: [35000], purchaseModes: ['financiado'] }),
+    )
+
+    const item = candidateOf(result, 'financiado:35000:36')
+
+    expect(item.reasons.map((r) => r.code)).toContain('reserva_violada')
+  })
+  it('cenário personalizado aparece mesmo quando não está na grade', () => {
+    const result = calculateInverseOptions(
+      makeRequest({
+        downPaymentOptions: [0],
+
+        purchaseModes: ['financiado'],
+
+        personalized: { downPayment: 12345, installments: 30 },
+      }),
+    )
+
+    expect(result.scenarios.personalizado?.id).toBe('financiado:12345:30')
+
+    expect(result.scenarios.personalizado?.personalized).toBe(true)
+  })
+
+  it('renda de referência = custo mensal total ÷ limite do cenário', () => {
+    const result = calculateInverseOptions(
+      makeRequest({
+        downPaymentOptions: [0],
+
+        installmentOptions: [36],
+
+        purchaseModes: ['financiado'],
+      }),
+    )
+
+    const item = candidateOf(result, 'financiado:0:36')
+
+    expect(item.monthlyTotal).not.toBeNull()
+
+    expect(item.referenceIncome).toBeCloseTo(
+      (item.monthlyTotal ?? 0) / SCENARIOS.equilibrado.maxIncomeCommitment,
+
+      1,
+    )
+
+    expect(result.premises.join(' ')).toContain('não aprovação nem política de crédito')
+  })
 })
-
-
-
-it('renda insuficiente não recebe solução viável e explica o motivo', () => {
-
-const result = calculateInverseOptions(
-
-makeRequest({
-
-finance: {
-
-...makeInput().finance,
-
-netIncome: 3000,
-
-fixedExpenses: 2800,
-
-maxInstallment: null,
-
-},
-
-}),
-
-)
-
-expect(result.status).toBe('sem_solucao')
-
-expect(result.options).toHaveLength(0)
-
-expect(result.candidates.every((item) => item.status !== 'viavel')).toBe(true)
-
-expect(Object.keys(result.rejectionCounts).length).toBeGreaterThan(0)
-
-expect(result.suggestions[0]).toMatch(/Nenhuma combinação/)
-
-})
-
-
-
-it('ausência de solução mantém todos os cenários vazios, sem esconder nada', () => {
-
-const result = calculateInverseOptions(makeRequest({ maxMonthlyTotal: 100 }))
-
-expect(result.status).toBe('sem_solucao')
-
-expect(result.scenarios.menorEntrada).toBeNull()
-
-expect(result.scenarios.menorParcela).toBeNull()
-
-expect(result.scenarios.menorCustoTotal).toBeNull()
-
-expect(result.scenarios.avista).toBeNull()
-
-expect(result.suggestions.join(' ')).not.toMatch(/oculta|esconder|empréstimo adicional/i)
-
-})
-
-
-
-it('entrada acima do disponível é recusada com a diferença', () => {
-
-const result = calculateInverseOptions(
-
-makeRequest({
-
-maxDownPayment: 12000,
-
-downPaymentOptions: [30000],
-
-purchaseModes: ['financiado'],
-
-}),
-
-)
-
-const item = candidateOf(result, 'financiado:30000:36')
-
-const reason = item.reasons.find((r) => r.code === 'entrada_acima_disponivel')
-
-expect(reason?.gap).toBe(18000)
-
-})
-
-
-
-it('usar a reserva protegida sem autorização bloqueia a combinação', () => {
-
-const result = calculateInverseOptions(
-
-makeRequest({ downPaymentOptions: [35000], purchaseModes: ['financiado'] }),
-
-)
-
-const item = candidateOf(result, 'financiado:35000:36')
-
-expect(item.reasons.map((r) => r.code)).toContain('reserva_violada')
-
-})
-it('cenário personalizado aparece mesmo quando não está na grade', () => {
-
-const result = calculateInverseOptions(
-
-makeRequest({
-
-downPaymentOptions: [0],
-
-purchaseModes: ['financiado'],
-
-personalized: { downPayment: 12345, installments: 30 },
-
-}),
-
-)
-
-expect(result.scenarios.personalizado?.id).toBe('financiado:12345:30')
-
-expect(result.scenarios.personalizado?.personalized).toBe(true)
-
-})
-
-
-
-it('renda de referência = custo mensal total ÷ limite do cenário', () => {
-
-const result = calculateInverseOptions(
-
-makeRequest({
-
-downPaymentOptions: [0],
-
-installmentOptions: [36],
-
-purchaseModes: ['financiado'],
-
-}),
-
-)
-
-const item = candidateOf(result, 'financiado:0:36')
-
-expect(item.monthlyTotal).not.toBeNull()
-
-expect(item.referenceIncome).toBeCloseTo(
-
-(item.monthlyTotal ?? 0) / SCENARIOS.equilibrado.maxIncomeCommitment,
-
-1,
-
-)
-
-expect(result.premises.join(' ')).toContain('não aprovação nem política de crédito')
-
-})
-
-})
-
-
 
 describe('simulação inversa: reserva e margem', () => {
+  it('com renda, mostra a reserva que sobra e a renda livre depois do veículo', () => {
+    const result = calculateInverseOptions(
+      makeRequest({
+        downPaymentOptions: [10000],
 
-it('com renda, mostra a reserva que sobra e a renda livre depois do veículo', () => {
+        installmentOptions: [36],
 
-const result = calculateInverseOptions(
+        purchaseModes: ['financiado'],
+      }),
+    )
 
-makeRequest({
+    const item = candidateOf(result, 'financiado:10000:36')
 
-downPaymentOptions: [10000],
+    // Renda 12.000 − essenciais 4.000 = 8.000 disponíveis; reserva acumulada 40.000 − entrada 10.000.
 
-installmentOptions: [36],
+    expect(item.reserveAfter).toBe(30000)
 
-purchaseModes: ['financiado'],
+    expect(item.marginAfter).toBeCloseTo(8000 - (item.monthlyTotal ?? 0), 2)
+  })
 
-}),
+  it('sem renda, reserva e margem ficam nulas (não viram zero)', () => {
+    const result = calculateInverseOptions(
+      makeRequest({ hasIncome: false, downPaymentOptions: [0] }),
+    )
 
-)
+    const item = candidateOf(result, 'financiado:0:36')
 
-const item = candidateOf(result, 'financiado:10000:36')
+    expect(item.reserveAfter).toBeNull()
 
-// Renda 12.000 − essenciais 4.000 = 8.000 disponíveis; reserva acumulada 40.000 − entrada 10.000.
-
-expect(item.reserveAfter).toBe(30000)
-
-expect(item.marginAfter).toBeCloseTo(8000 - (item.monthlyTotal ?? 0), 2)
-
+    expect(item.marginAfter).toBeNull()
+  })
 })
-
-
-
-it('sem renda, reserva e margem ficam nulas (não viram zero)', () => {
-
-const result = calculateInverseOptions(
-
-makeRequest({ hasIncome: false, downPaymentOptions: [0] }),
-
-)
-
-const item = candidateOf(result, 'financiado:0:36')
-
-expect(item.reserveAfter).toBeNull()
-
-expect(item.marginAfter).toBeNull()
-
-})
-
-})
-
-
 
 describe('simulação inversa: dominância', () => {
+  it('alternativa dominada: outra igual ou melhor em entrada, parcela e custo, e melhor em uma', () => {
+    const a = candidate({
+      id: 'a',
 
-it('alternativa dominada: outra igual ou melhor em entrada, parcela e custo, e melhor em uma', () => {
+      downPayment: 10000,
 
-const a = candidate({
+      monthlyInstallment: 900,
 
-id: 'a',
+      tcoEconomic: 70000,
+    })
 
-downPayment: 10000,
+    const b = candidate({
+      id: 'b',
 
-monthlyInstallment: 900,
+      downPayment: 10000,
 
-tcoEconomic: 70000,
+      monthlyInstallment: 800,
 
+      tcoEconomic: 70000,
+    })
+
+    expect(isDominated(a, b)).toBe(true)
+
+    expect(isDominated(b, a)).toBe(false)
+  })
+
+  it('empate completo não é dominância', () => {
+    const a = candidate({
+      id: 'a',
+
+      downPayment: 10000,
+
+      monthlyInstallment: 900,
+
+      tcoEconomic: 70000,
+    })
+
+    const b = candidate({
+      id: 'b',
+
+      downPayment: 10000,
+
+      monthlyInstallment: 900,
+
+      tcoEconomic: 70000,
+    })
+
+    expect(isDominated(a, b)).toBe(false)
+
+    expect(isDominated(b, a)).toBe(false)
+  })
+
+  it('as opções devolvidas nunca são dominadas entre si', () => {
+    const result = calculateInverseOptions(makeRequest())
+
+    for (const option of result.options) {
+      for (const other of result.options) {
+        if (other !== option) expect(isDominated(option, other)).toBe(false)
+      }
+    }
+  })
 })
-
-const b = candidate({
-
-id: 'b',
-
-downPayment: 10000,
-
-monthlyInstallment: 800,
-
-tcoEconomic: 70000,
-
-})
-
-expect(isDominated(a, b)).toBe(true)
-
-expect(isDominated(b, a)).toBe(false)
-
-})
-
-
-
-it('empate completo não é dominância', () => {
-
-const a = candidate({
-
-id: 'a',
-
-downPayment: 10000,
-
-monthlyInstallment: 900,
-
-tcoEconomic: 70000,
-
-})
-
-const b = candidate({
-
-id: 'b',
-
-downPayment: 10000,
-
-monthlyInstallment: 900,
-
-tcoEconomic: 70000,
-
-})
-
-expect(isDominated(a, b)).toBe(false)
-
-expect(isDominated(b, a)).toBe(false)
-
-})
-
-
-
-it('as opções devolvidas nunca são dominadas entre si', () => {
-
-const result = calculateInverseOptions(makeRequest())
-
-for (const option of result.options) {
-
-for (const other of result.options) {
-
-if (other !== option) expect(isDominated(option, other)).toBe(false)
-
-}
-
-}
-
-})
-
-})
-
-
 
 describe('simulação inversa: UF, condição e determinismo', () => {
+  it('mudança de UF sem regra de IPVA torna o custo indisponível, nunca zero', () => {
+    const result = calculateInverseOptions(
+      makeRequest({
+        registrationState: 'SP',
 
-it('mudança de UF sem regra de IPVA torna o custo indisponível, nunca zero', () => {
+        allowDemonstrativeTax: false,
 
-const result = calculateInverseOptions(
+        purchaseModes: ['avista'],
+      }),
+    )
 
-makeRequest({
+    const cash = result.candidates[0]
 
-registrationState: 'SP',
+    expect(cash?.status).toBe('indisponivel')
 
-allowDemonstrativeTax: false,
+    expect(cash?.reasons[0]?.code).toBe('ipva_indisponivel')
 
-purchaseModes: ['avista'],
+    expect(cash?.monthlyTotal).toBeNull()
+  })
 
-}),
+  it('novo e usado passam pelo cálculo sem alterar os valores de custo numa UF sem regra específica', () => {
+    const novo = calculateInverseOptions(
+      makeRequest({ condition: 'novo', downPaymentOptions: [0] }),
+    )
 
-)
+    const usado = calculateInverseOptions(
+      makeRequest({ condition: 'usado', downPaymentOptions: [0] }),
+    )
 
-const cash = result.candidates[0]
+    const a = candidateOf(novo, 'financiado:0:36')
 
-expect(cash?.status).toBe('indisponivel')
+    const b = candidateOf(usado, 'financiado:0:36')
 
-expect(cash?.reasons[0]?.code).toBe('ipva_indisponivel')
+    expect(a.monthlyTotal).toBe(b.monthlyTotal)
 
-expect(cash?.monthlyTotal).toBeNull()
+    expect(novo.premises.join(' ')).toContain('novo')
 
-})
+    expect(usado.premises.join(' ')).toContain('usado')
+  })
 
+  it('mesma entrada gera o mesmo resultado, independente da ordem das formas de compra', () => {
+    const first = calculateInverseOptions(makeRequest({ purchaseModes: ['financiado', 'avista'] }))
 
+    const again = calculateInverseOptions(makeRequest({ purchaseModes: ['financiado', 'avista'] }))
 
-it('novo e usado passam pelo cálculo sem alterar os valores de custo numa UF sem regra específica', () => {
+    const reversed = calculateInverseOptions(
+      makeRequest({ purchaseModes: ['avista', 'financiado'] }),
+    )
 
-const novo = calculateInverseOptions(
+    expect(again).toEqual(first)
 
-makeRequest({ condition: 'novo', downPaymentOptions: [0] }),
+    expect(reversed.options).toEqual(first.options)
 
-)
-
-const usado = calculateInverseOptions(
-
-makeRequest({ condition: 'usado', downPaymentOptions: [0] }),
-
-)
-
-const a = candidateOf(novo, 'financiado:0:36')
-
-const b = candidateOf(usado, 'financiado:0:36')
-
-expect(a.monthlyTotal).toBe(b.monthlyTotal)
-
-expect(novo.premises.join(' ')).toContain('novo')
-
-expect(usado.premises.join(' ')).toContain('usado')
-
-})
-
-
-
-it('mesma entrada gera o mesmo resultado, independente da ordem das formas de compra', () => {
-
-const first = calculateInverseOptions(makeRequest({ purchaseModes: ['financiado', 'avista'] }))
-
-const again = calculateInverseOptions(makeRequest({ purchaseModes: ['financiado', 'avista'] }))
-
-const reversed = calculateInverseOptions(
-
-makeRequest({ purchaseModes: ['avista', 'financiado'] }),
-
-)
-
-expect(again).toEqual(first)
-
-expect(reversed.options).toEqual(first.options)
-
-expect(reversed.scenarios).toEqual(first.scenarios)
-
-})
-
+    expect(reversed.scenarios).toEqual(first.scenarios)
+  })
 })

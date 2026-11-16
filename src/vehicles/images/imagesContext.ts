@@ -1,131 +1,91 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 
 import type {
-
-VehicleImage,
-
-VehicleImageProvider,
-
-VehicleImageQuery,
-
+  VehicleImage,
+  VehicleImageProvider,
+  VehicleImageQuery,
 } from '../../../services/images/types'
 
-
-
 export interface VehicleImagesValue {
+  /** Existe uma fonte de fotos configurada. */
 
-/** Existe uma fonte de fotos configurada. */
+  available: boolean
 
-available: boolean
+  /** O usuário permite carregar fotos (padrão: sim). Fica só em memória. */
 
-/** O usuário permite carregar fotos (padrão: sim). Fica só em memória. */
+  enabled: boolean
 
-enabled: boolean
+  setEnabled: (enabled: boolean) => void
 
-setEnabled: (enabled: boolean) => void
-
-provider: VehicleImageProvider | null
-
+  provider: VehicleImageProvider | null
 }
-
-
 
 export const VehicleImagesContext = createContext<VehicleImagesValue>({
+  available: false,
 
-available: false,
+  enabled: false,
 
-enabled: false,
+  setEnabled: () => {},
 
-setEnabled: () => {},
-
-provider: null,
-
+  provider: null,
 })
 
-
-
 export function useVehicleImagesSettings() {
+  const { available, enabled, setEnabled } = useContext(VehicleImagesContext)
 
-const { available, enabled, setEnabled } = useContext(VehicleImagesContext)
-
-return { available, enabled, setEnabled }
-
+  return { available, enabled, setEnabled }
 }
-
-
 
 export type VehicleImageStatus = 'off' | 'loading' | 'ready' | 'none'
 
-
-
 interface ImageState {
+  key: string
 
-key: string
-
-image: VehicleImage | null
-
+  image: VehicleImage | null
 }
-
-
 
 /** Busca a foto do veículo. `off`: desativada ou sem fonte; `none`: não há foto adequada. */
 
 export function useVehicleImage(query: VehicleImageQuery): {
+  status: VehicleImageStatus
 
-status: VehicleImageStatus
-
-image: VehicleImage | null
-
+  image: VehicleImage | null
 } {
+  const { provider, enabled } = useContext(VehicleImagesContext)
 
-const { provider, enabled } = useContext(VehicleImagesContext)
+  const { brand, model, modelYear } = query
 
-const { brand, model, modelYear } = query
+  const active = enabled && provider !== null
 
-const active = enabled && provider !== null
+  const key = `${brand}|${model}|${modelYear}`
 
-const key = `${brand}|${model}|${modelYear}`
+  const [state, setState] = useState<ImageState | null>(null)
 
-const [state, setState] = useState<ImageState | null>(null)
+  useEffect(() => {
+    if (!active || !provider) return
 
+    let cancelled = false
 
+    provider
 
-useEffect(() => {
+      .find({ brand, model, modelYear })
 
-if (!active || !provider) return
+      .then((image) => {
+        if (!cancelled) setState({ key, image })
+      })
 
-let cancelled = false
+      .catch(() => {
+        if (!cancelled) setState({ key, image: null })
+      })
 
-provider
+    return () => {
+      cancelled = true
+    }
+  }, [active, provider, brand, model, modelYear, key])
 
-.find({ brand, model, modelYear })
+  if (!active) return { status: 'off', image: null }
 
-.then((image) => {
+  if (state?.key !== key) return { status: 'loading', image: null }
 
-if (!cancelled) setState({ key, image })
-
-})
-
-.catch(() => {
-
-if (!cancelled) setState({ key, image: null })
-
-})
-
-return () => {
-
-cancelled = true
-
-}
-
-}, [active, provider, brand, model, modelYear, key])
-
-
-
-if (!active) return { status: 'off', image: null }
-
-if (state?.key !== key) return { status: 'loading', image: null }
-
-return state.image ? { status: 'ready', image: state.image } : { status: 'none', image: null }
-
+  return state.image ? { status: 'ready', image: state.image } : { status: 'none', image: null }
 }

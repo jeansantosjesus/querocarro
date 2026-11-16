@@ -201,7 +201,7 @@ export function computeVehicleCosts(vehicle: Vehicle, context: CostContext): Cos
     insuranceAnnual = (price * rate * scenario.multipliers.insurance) / 100
   } else {
     notes.push('Categoria de seguro: informação não disponível.')
-                                    }// Manutenção (preventiva + reserva corretiva, com acréscimo por idade)
+  } // Manutenção (preventiva + reserva corretiva, com acréscimo por idade)
   let maintenanceAnnual: number | null = null
   if (vehicle.maintenanceAnnualBRL !== null && vehicle.maintenanceAnnualBRL >= 0) {
     const age = vehicleAge(vehicle, context.referenceYear)

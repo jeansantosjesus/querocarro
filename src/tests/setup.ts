@@ -6,62 +6,43 @@ import * as axeMatchers from 'vitest-axe/matchers'
 
 import { afterEach, expect } from 'vitest'
 
-
-
 expect.extend(axeMatchers)
 
-
-
 afterEach(() => {
-
-cleanup()
-
+  cleanup()
 })
-
-
 
 // jsdom não implementa matchMedia / ResizeObserver (usados por Recharts e layout).
 
 if (!window.matchMedia) {
+  window.matchMedia = (query: string) =>
+    ({
+      matches: false,
 
-window.matchMedia = (query: string) =>
+      media: query,
 
-({
+      onchange: null,
 
-matches: false,
+      addEventListener: () => {},
 
-media: query,
+      removeEventListener: () => {},
 
-onchange: null,
+      addListener: () => {},
 
-addEventListener: () => {},
+      removeListener: () => {},
 
-removeEventListener: () => {},
-
-addListener: () => {},
-
-removeListener: () => {},
-
-dispatchEvent: () => false,
-
-}) as MediaQueryList
-
+      dispatchEvent: () => false,
+    }) as MediaQueryList
 }
-
-
 
 if (!('ResizeObserver' in window)) {
+  class ResizeObserverStub {
+    observe() {}
 
-class ResizeObserverStub {
+    unobserve() {}
 
-observe() {}
+    disconnect() {}
+  }
 
-unobserve() {}
-
-disconnect() {}
-
-}
-
-;(window as unknown as { ResizeObserver: unknown }).ResizeObserver = ResizeObserverStub
-
+  ;(window as unknown as { ResizeObserver: unknown }).ResizeObserver = ResizeObserverStub
 }

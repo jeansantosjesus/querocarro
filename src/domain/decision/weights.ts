@@ -149,4 +149,4 @@ export function weightDeltas(current: Weights, reference: Weights): Record<Crite
   const deltas = {} as Record<CriterionId, number>
   for (const id of CRITERION_IDS) deltas[id] = current[id] - reference[id]
   return deltas
-  }
+}

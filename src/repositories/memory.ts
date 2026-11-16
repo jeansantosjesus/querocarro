@@ -1,32 +1,18 @@
 import type {
-
-SavedSimulation,
-
-SavedSimulationSummary,
-
-SimulationDraft,
-
-UserPreferences,
-
-UserProfile,
-
+  SavedSimulation,
+  SavedSimulationSummary,
+  SimulationDraft,
+  UserPreferences,
+  UserProfile,
 } from '../types/history'
 
 import {
-
-ConsentRequiredError,
-
-type PreferencesRepository,
-
-type ProfileRepository,
-
-type Repositories,
-
-type SimulationRepository,
-
+  ConsentRequiredError,
+  type PreferencesRepository,
+  type ProfileRepository,
+  type Repositories,
+  type SimulationRepository,
 } from './types'
-
-
 
 /**
 
@@ -39,213 +25,149 @@ type SimulationRepository,
 */
 
 export class MemoryDatabase {
+  readonly simulations = new Map<string, SavedSimulation & { userId: string }>()
 
-readonly simulations = new Map<string, SavedSimulation & { userId: string }>()
+  readonly profiles = new Map<string, UserProfile>()
 
-readonly profiles = new Map<string, UserProfile>()
+  readonly preferences = new Map<string, UserPreferences>()
 
-readonly preferences = new Map<string, UserPreferences>()
+  private counter = 0
 
-private counter = 0
+  nextId(): string {
+    this.counter += 1
 
+    // Formato UUID, como no banco real (as rotas validam o formato do id).
 
+    return `00000000-0000-4000-8000-${String(this.counter).padStart(12, '0')}`
+  }
 
-nextId(): string {
-
-this.counter += 1
-
-// Formato UUID, como no banco real (as rotas validam o formato do id).
-
-return `00000000-0000-4000-8000-${String(this.counter).padStart(12, '0')}`
-
+  repositoriesFor(userId: string, clock: () => Date = () => new Date()): Repositories {
+    return createMemoryRepositories(this, userId, clock)
+  }
 }
-
-
-
-repositoriesFor(userId: string, clock: () => Date = () => new Date()): Repositories {
-
-return createMemoryRepositories(this, userId, clock)
-
-}
-
-}
-
-
 
 function summarize(simulation: SavedSimulation): SavedSimulationSummary {
+  return {
+    id: simulation.id,
 
-return {
+    title: simulation.title,
 
-id: simulation.id,
+    scenarioId: simulation.scenarioId,
 
-title: simulation.title,
+    createdAt: simulation.createdAt,
 
-scenarioId: simulation.scenarioId,
+    fipeReferenceMonth: simulation.fipeReferenceMonth,
 
-createdAt: simulation.createdAt,
+    fipeReferenceMonthLabel: simulation.fipeReferenceMonthLabel,
 
-fipeReferenceMonth: simulation.fipeReferenceMonth,
-
-fipeReferenceMonthLabel: simulation.fipeReferenceMonthLabel,
-
-resultCount: simulation.results.length,
-
+    resultCount: simulation.results.length,
+  }
 }
-
-}
-
-
 
 export function createMemoryRepositories(
+  db: MemoryDatabase,
 
-db: MemoryDatabase,
+  userId: string,
 
-userId: string,
-
-clock: () => Date = () => new Date(),
-
+  clock: () => Date = () => new Date(),
 ): Repositories {
+  const consent = () => db.preferences.get(userId)?.persistHistoryConsent === true
 
-const consent = () => db.preferences.get(userId)?.persistHistoryConsent === true
+  const simulations: SimulationRepository = {
+    async list() {
+      return [...db.simulations.values()]
 
+        .filter((item) => item.userId === userId)
 
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt) || b.id.localeCompare(a.id))
 
-const simulations: SimulationRepository = {
+        .map(summarize)
+    },
 
-async list() {
+    async get(id) {
+      const found = db.simulations.get(id)
 
-return [...db.simulations.values()]
+      if (!found || found.userId !== userId) return null
 
-.filter((item) => item.userId === userId)
+      const { userId: _owner, ...simulation } = found
 
-.sort((a, b) => b.createdAt.localeCompare(a.createdAt) || b.id.localeCompare(a.id))
+      return structuredClone(simulation)
+    },
 
-.map(summarize)
+    async save(draft: SimulationDraft) {
+      if (!consent()) throw new ConsentRequiredError()
 
-},
+      const simulation: SavedSimulation = {
+        ...structuredClone(draft),
 
-async get(id) {
+        id: db.nextId(),
 
-const found = db.simulations.get(id)
+        createdAt: clock().toISOString(),
+      }
 
-if (!found || found.userId !== userId) return null
+      db.simulations.set(simulation.id, { ...simulation, userId })
 
-const { userId: _owner, ...simulation } = found
+      return structuredClone(simulation)
+    },
 
-return structuredClone(simulation)
+    async remove(id) {
+      const found = db.simulations.get(id)
 
-},
+      if (found && found.userId === userId) db.simulations.delete(id)
+    },
 
-async save(draft: SimulationDraft) {
+    async removeAll() {
+      for (const [id, item] of db.simulations) {
+        if (item.userId === userId) db.simulations.delete(id)
+      }
+    },
+  }
 
-if (!consent()) throw new ConsentRequiredError()
+  const profile: ProfileRepository = {
+    async get() {
+      return db.profiles.get(userId) ?? null
+    },
 
-const simulation: SavedSimulation = {
+    async upsert({ displayName, privacyAcceptedAt }) {
+      const next: UserProfile = { id: userId, displayName, privacyAcceptedAt }
 
-...structuredClone(draft),
+      db.profiles.set(userId, next)
 
-id: db.nextId(),
+      return next
+    },
 
-createdAt: clock().toISOString(),
+    async deleteMyData() {
+      await simulations.removeAll()
 
-}
+      db.profiles.delete(userId)
 
-db.simulations.set(simulation.id, { ...simulation, userId })
+      db.preferences.delete(userId)
+    },
 
-return structuredClone(simulation)
+    async deleteAccount() {
+      await profile.deleteMyData()
+    },
+  }
 
-},
+  const preferences: PreferencesRepository = {
+    async get() {
+      return db.preferences.get(userId) ?? { persistHistoryConsent: false, defaultScenario: null }
+    },
 
-async remove(id) {
+    async update(patch) {
+      const current = db.preferences.get(userId) ?? {
+        persistHistoryConsent: false,
 
-const found = db.simulations.get(id)
+        defaultScenario: null,
+      }
 
-if (found && found.userId === userId) db.simulations.delete(id)
+      const next = { ...current, ...patch }
 
-},
+      db.preferences.set(userId, next)
 
-async removeAll() {
+      return next
+    },
+  }
 
-for (const [id, item] of db.simulations) {
-
-if (item.userId === userId) db.simulations.delete(id)
-
-}
-
-},
-
-}
-
-
-
-const profile: ProfileRepository = {
-
-async get() {
-
-return db.profiles.get(userId) ?? null
-
-},
-
-async upsert({ displayName, privacyAcceptedAt }) {
-
-const next: UserProfile = { id: userId, displayName, privacyAcceptedAt }
-
-db.profiles.set(userId, next)
-
-return next
-
-},
-
-async deleteMyData() {
-
-await simulations.removeAll()
-
-db.profiles.delete(userId)
-
-db.preferences.delete(userId)
-
-},
-
-async deleteAccount() {
-
-await profile.deleteMyData()
-
-},
-
-}
-
-
-
-const preferences: PreferencesRepository = {
-
-async get() {
-
-return db.preferences.get(userId) ?? { persistHistoryConsent: false, defaultScenario: null }
-
-},
-
-async update(patch) {
-
-const current = db.preferences.get(userId) ?? {
-
-persistHistoryConsent: false,
-
-defaultScenario: null,
-
-}
-
-const next = { ...current, ...patch }
-
-db.preferences.set(userId, next)
-
-return next
-
-},
-
-}
-
-
-
-return { simulations, profile, preferences }
-
+  return { simulations, profile, preferences }
 }

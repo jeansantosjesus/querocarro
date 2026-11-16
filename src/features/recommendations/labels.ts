@@ -2,46 +2,34 @@ import type { Periodicity, Reliability } from '../../types/estimate'
 
 import type { ValueOrigin } from '../../types/vehicle'
 
-
-
 export const ORIGIN_LABEL: Record<ValueOrigin, string> = {
+  fipe_online: 'FIPE (consulta online)',
 
-fipe_online: 'FIPE (consulta online)',
+  fipe_referencia_salva: 'FIPE (referência salva)',
 
-fipe_referencia_salva: 'FIPE (referência salva)',
+  estimativa_demonstrativa: 'Estimativa demonstrativa do QC',
 
-estimativa_demonstrativa: 'Estimativa demonstrativa do QC',
+  premissa_configuravel: 'Premissa configurável do QC',
 
-premissa_configuravel: 'Premissa configurável do QC',
+  informado_usuario: 'Informado por você',
 
-informado_usuario: 'Informado por você',
-
-calculado: 'Calculado pelo QC',
-
+  calculado: 'Calculado pelo QC',
 }
-
-
 
 export const PERIODICITY_LABEL: Record<Periodicity, string> = {
+  mensal: 'Mensal',
 
-mensal: 'Mensal',
+  anual: 'Anual (dividido por 12)',
 
-anual: 'Anual (dividido por 12)',
+  unico: 'Valor único',
 
-unico: 'Valor único',
-
-por_km: 'Por km',
-
+  por_km: 'Por km',
 }
 
-
-
 export const RELIABILITY_LABEL: Record<Reliability, string> = {
+  alta: 'Alta',
 
-alta: 'Alta',
+  media: 'Média',
 
-media: 'Média',
-
-baixa: 'Baixa',
-
+  baixa: 'Baixa',
 }

@@ -1,7 +1,5 @@
 @import 'tailwindcss';
 
-
-
 /*
 
 Design tokens do Quero Carro.
@@ -17,235 +15,149 @@ Contrastes verificados para WCAG 2.2 AA (texto normal >= 4.5:1, componentes >= 3
 */
 
 @theme {
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 
---font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --color-brand-50: #f0fdfa;
 
+  --color-brand-100: #ccfbf1;
 
+  --color-brand-600: #0d9488;
 
---color-brand-50: #f0fdfa;
+  --color-brand-700: #0f766e;
 
---color-brand-100: #ccfbf1;
+  --color-brand-800: #115e59;
 
---color-brand-600: #0d9488;
+  --color-brand-900: #134e4a;
 
---color-brand-700: #0f766e;
+  --color-ink-50: #f8fafc;
 
---color-brand-800: #115e59;
+  --color-ink-100: #f1f5f9;
 
---color-brand-900: #134e4a;
+  --color-ink-200: #e2e8f0;
 
+  --color-ink-300: #cbd5e1;
 
+  --color-ink-400: #94a3b8;
 
---color-ink-50: #f8fafc;
+  --color-ink-500: #64748b;
 
---color-ink-100: #f1f5f9;
+  --color-ink-600: #475569;
 
---color-ink-200: #e2e8f0;
+  --color-ink-700: #334155;
 
---color-ink-300: #cbd5e1;
+  --color-ink-800: #1e293b;
 
---color-ink-400: #94a3b8;
+  --color-ink-900: #0f172a;
 
---color-ink-500: #64748b;
+  --color-good-bg: #ecfdf5;
 
---color-ink-600: #475569;
+  --color-good-fg: #065f46;
 
---color-ink-700: #334155;
+  --color-warn-bg: #fffbeb;
 
---color-ink-800: #1e293b;
+  --color-warn-fg: #92400e;
 
---color-ink-900: #0f172a;
+  --color-bad-bg: #fef2f2;
 
+  --color-bad-fg: #991b1b;
 
+  --color-info-bg: #eff6ff;
 
---color-good-bg: #ecfdf5;
+  --color-info-fg: #1e40af;
 
---color-good-fg: #065f46;
-
---color-warn-bg: #fffbeb;
-
---color-warn-fg: #92400e;
-
---color-bad-bg: #fef2f2;
-
---color-bad-fg: #991b1b;
-
---color-info-bg: #eff6ff;
-
---color-info-fg: #1e40af;
-
-
-
---shadow-card: 0 1px 2px rgb(15 23 42 / 0.06), 0 4px 12px rgb(15 23 42 / 0.06);
-
+  --shadow-card: 0 1px 2px rgb(15 23 42 / 0.06), 0 4px 12px rgb(15 23 42 / 0.06);
 }
-
-
 
 @layer base {
+  html {
+    color-scheme: light;
 
-html {
+    scroll-behavior: smooth;
+  }
 
-color-scheme: light;
+  body {
+    @apply bg-ink-50 font-sans text-ink-900 antialiased;
+  }
 
-scroll-behavior: smooth;
+  /* Foco visível e consistente (WCAG 2.4.7 / 2.4.11) */
 
+  :focus-visible {
+    outline: 3px solid var(--color-brand-700);
+
+    outline-offset: 2px;
+
+    border-radius: 4px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+
+      animation-iteration-count: 1 !important;
+
+      transition-duration: 0.01ms !important;
+    }
+  }
 }
-
-
-
-body {
-
-@apply bg-ink-50 font-sans text-ink-900 antialiased;
-
-}
-
-
-
-/* Foco visível e consistente (WCAG 2.4.7 / 2.4.11) */
-
-:focus-visible {
-
-outline: 3px solid var(--color-brand-700);
-
-outline-offset: 2px;
-
-border-radius: 4px;
-
-}
-
-
-
-@media (prefers-reduced-motion: reduce) {
-
-html {
-
-scroll-behavior: auto;
-
-}
-
-*,
-
-*::before,
-
-*::after {
-
-animation-duration: 0.01ms !important;
-
-animation-iteration-count: 1 !important;
-
-transition-duration: 0.01ms !important;
-
-}
-
-}
-
-}
-
-
 
 @utility qc-card {
-
-@apply rounded-2xl border border-ink-200 bg-white shadow-card;
-
+  @apply rounded-2xl border border-ink-200 bg-white shadow-card;
 }
-
-
 
 @utility qc-btn {
-
-@apply inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60;
-
+  @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60;
 }
-
-
 
 @utility qc-btn-primary {
-
-@apply qc-btn bg-brand-700 text-white hover:bg-brand-800;
-
+  @apply qc-btn bg-brand-700 text-white hover:bg-brand-800;
 }
-
-
 
 @utility qc-btn-secondary {
-
-@apply qc-btn border border-ink-300 bg-white text-ink-900 hover:bg-ink-100;
-
+  @apply qc-btn border border-ink-300 bg-white text-ink-900 hover:bg-ink-100;
 }
-
-
 
 @utility qc-btn-ghost {
-
-@apply qc-btn text-brand-800 hover:bg-brand-50;
-
+  @apply qc-btn text-brand-800 hover:bg-brand-50;
 }
-
-
 
 @utility qc-btn-danger {
-
-@apply qc-btn border border-bad-fg bg-white text-bad-fg hover:bg-bad-bg;
-
+  @apply qc-btn border border-bad-fg bg-white text-bad-fg hover:bg-bad-bg;
 }
-
-
 
 @utility qc-input {
+  @apply min-h-11 w-full rounded-lg border border-ink-500 bg-white px-3 py-2 text-base text-ink-900 placeholder:text-ink-500;
 
-@apply min-h-11 w-full rounded-lg border border-ink-500 bg-white px-3 py-2 text-base text-ink-900 placeholder:text-ink-500;
-
-
-
-&[aria-invalid='true'] {
-
-@apply border-bad-fg;
-
+  &[aria-invalid='true'] {
+    @apply border-bad-fg;
+  }
 }
-
-}
-
-
 
 @utility qc-label {
-
-@apply mb-1 block text-sm font-semibold text-ink-800;
-
+  @apply mb-1 block text-sm font-semibold text-ink-800;
 }
-
-
 
 @utility qc-hint {
-
-@apply mt-1 text-sm text-ink-600;
-
+  @apply mt-1 text-sm text-ink-600;
 }
-
-
 
 @utility qc-error {
-
-@apply mt-1 text-sm font-medium text-bad-fg;
-
+  @apply mt-1 text-sm font-medium text-bad-fg;
 }
-
-
 
 /* Impressão / exportação em PDF do histórico */
 
 @media print {
+  .no-print {
+    display: none !important;
+  }
 
-.no-print {
-
-display: none !important;
-
-}
-
-body {
-
-background: #fff;
-
-}
-
+  body {
+    background: #fff;
+  }
 }

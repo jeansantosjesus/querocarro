@@ -18,8 +18,6 @@ import type { Vehicle } from '../../types/vehicle'
 
 import { DEMO_INPUT } from '../simulation/defaults'
 
-
-
 /**
 
 * Estado do formulário "Quero este carro". Campos vazios NÃO viram zero:
@@ -29,224 +27,187 @@ import { DEMO_INPUT } from '../simulation/defaults'
 */
 
 export interface InverseFormState {
+  condition: 'novo' | 'usado' | 'indiferente'
 
-condition: 'novo' | 'usado' | 'indiferente'
+  registrationState: BrazilianStateCode | ''
 
-registrationState: BrazilianStateCode | ''
+  allowDemonstrativeTax: boolean
 
-allowDemonstrativeTax: boolean
+  purchaseFinanced: boolean
 
-purchaseFinanced: boolean
+  purchaseCash: boolean
 
-purchaseCash: boolean
+  amortization: AmortizationSystem
 
-amortization: AmortizationSystem
+  horizonMonths: TcoHorizon
 
-horizonMonths: TcoHorizon
+  hasIncome: boolean
 
-hasIncome: boolean
+  netIncome: string
 
-netIncome: string
+  fixedExpenses: string
 
-fixedExpenses: string
+  otherRecurringExpenses: string
 
-otherRecurringExpenses: string
+  otherDebts: string
 
-otherDebts: string
+  monthlyReserve: string
 
-monthlyReserve: string
+  reserve: string
 
-reserve: string
+  accumulatedReserve: string
 
-accumulatedReserve: string
+  monthlyRatePct: string
 
-monthlyRatePct: string
+  installments: number[]
 
-installments: number[]
+  maxDownPayment: string
 
-maxDownPayment: string
+  maxInstallment: string
 
-maxInstallment: string
+  maxMonthlyTotal: string
 
-maxMonthlyTotal: string
+  personalDownPayment: string
 
-personalDownPayment: string
-
-personalInstallments: string
-
+  personalInstallments: string
 }
-
-
 
 export interface InverseContext {
+  vehicle: Vehicle
 
-vehicle: Vehicle
+  referenceYear: number
 
-referenceYear: number
+  /** Simulação atual, quando existe. Serve só para pré-preencher e usar o mesmo cenário. */
 
-/** Simulação atual, quando existe. Serve só para pré-preencher e usar o mesmo cenário. */
-
-input: SimulationInput | null
-
+  input: SimulationInput | null
 }
 
-
-
 export type InverseBuildResult =
-
-{ ok: true; request: InverseRequest } | { ok: false; errors: string[] }
-
-
+  { ok: true; request: InverseRequest } | { ok: false; errors: string[] }
 
 const DEFAULT_INSTALLMENTS = [...INVERSE_INSTALLMENT_OPTIONS]
 
-
-
 function text(value: number | null | undefined): string {
-
-return value === null || value === undefined ? '' : String(value)
-
+  return value === null || value === undefined ? '' : String(value)
 }
-
-
 
 /** Pré-preenche com a simulação atual. Sem simulação, nada de renda é assumido. */
 
 export function createInverseForm(input: SimulationInput | null): InverseFormState {
+  if (!input) {
+    return {
+      condition: 'indiferente',
 
-if (!input) {
+      registrationState: '',
 
-return {
+      allowDemonstrativeTax: false,
 
-condition: 'indiferente',
+      purchaseFinanced: true,
 
-registrationState: '',
+      purchaseCash: true,
 
-allowDemonstrativeTax: false,
+      amortization: 'price',
 
-purchaseFinanced: true,
+      horizonMonths: 36,
 
-purchaseCash: true,
+      hasIncome: false,
 
-amortization: 'price',
+      netIncome: '',
 
-horizonMonths: 36,
+      fixedExpenses: '',
 
-hasIncome: false,
+      otherRecurringExpenses: '',
 
-netIncome: '',
+      otherDebts: '',
 
-fixedExpenses: '',
+      monthlyReserve: '',
 
-otherRecurringExpenses: '',
+      reserve: '',
 
-otherDebts: '',
+      accumulatedReserve: '',
 
-monthlyReserve: '',
+      monthlyRatePct: '1.5',
 
-reserve: '',
+      installments: DEFAULT_INSTALLMENTS,
 
-accumulatedReserve: '',
+      maxDownPayment: '',
 
-monthlyRatePct: '1.5',
+      maxInstallment: '',
 
-installments: DEFAULT_INSTALLMENTS,
+      maxMonthlyTotal: '',
 
-maxDownPayment: '',
+      personalDownPayment: '',
 
-maxInstallment: '',
+      personalInstallments: '',
+    }
+  }
 
-maxMonthlyTotal: '',
+  return {
+    condition: input.objective.condition,
 
-personalDownPayment: '',
+    registrationState: input.registrationState ?? '',
 
-personalInstallments: '',
+    allowDemonstrativeTax: input.allowDemonstrativeTax,
 
+    purchaseFinanced: true,
+
+    purchaseCash: true,
+
+    amortization: 'price',
+
+    horizonMonths: 36,
+
+    hasIncome: true,
+
+    netIncome: text(input.finance.netIncome),
+
+    fixedExpenses: text(input.finance.fixedExpenses),
+
+    otherRecurringExpenses: text(input.finance.otherRecurringExpenses),
+
+    otherDebts: text(input.finance.otherDebts),
+
+    monthlyReserve: text(input.finance.monthlyReserve),
+
+    reserve: text(input.finance.reserve),
+
+    accumulatedReserve: text(input.finance.accumulatedReserve),
+
+    monthlyRatePct: text(input.finance.monthlyRatePct),
+
+    installments: DEFAULT_INSTALLMENTS,
+
+    maxDownPayment: '',
+
+    maxInstallment: text(input.finance.maxInstallment),
+
+    maxMonthlyTotal: '',
+
+    personalDownPayment: '',
+
+    personalInstallments: '',
+  }
 }
-
-}
-
-return {
-
-condition: input.objective.condition,
-
-registrationState: input.registrationState ?? '',
-
-allowDemonstrativeTax: input.allowDemonstrativeTax,
-
-purchaseFinanced: true,
-
-purchaseCash: true,
-
-amortization: 'price',
-
-horizonMonths: 36,
-
-hasIncome: true,
-
-netIncome: text(input.finance.netIncome),
-
-fixedExpenses: text(input.finance.fixedExpenses),
-
-otherRecurringExpenses: text(input.finance.otherRecurringExpenses),
-
-otherDebts: text(input.finance.otherDebts),
-
-monthlyReserve: text(input.finance.monthlyReserve),
-
-reserve: text(input.finance.reserve),
-
-accumulatedReserve: text(input.finance.accumulatedReserve),
-
-monthlyRatePct: text(input.finance.monthlyRatePct),
-
-installments: DEFAULT_INSTALLMENTS,
-
-maxDownPayment: '',
-
-maxInstallment: text(input.finance.maxInstallment),
-
-maxMonthlyTotal: '',
-
-personalDownPayment: '',
-
-personalInstallments: '',
-
-}
-
-}
-
-
 
 type Parsed = { ok: true; value: number | null } | { ok: false }
-
-
 
 /** Vazio = ausente (null). Texto inválido ou negativo = erro. Vírgula decimal aceita. */
 
 function parseOptional(raw: string): Parsed {
+  const normalized = raw.trim().replace(',', '.')
 
-const normalized = raw.trim().replace(',', '.')
+  if (normalized === '') return { ok: true, value: null }
 
-if (normalized === '') return { ok: true, value: null }
+  const value = Number(normalized)
 
-const value = Number(normalized)
-
-return Number.isFinite(value) && value >= 0 ? { ok: true, value } : { ok: false }
-
+  return Number.isFinite(value) && value >= 0 ? { ok: true, value } : { ok: false }
 }
-
-
 
 function parseRequired(raw: string): Parsed {
+  const parsed = parseOptional(raw)
 
-const parsed = parseOptional(raw)
-
-return parsed.ok && parsed.value !== null ? parsed : { ok: false }
-
+  return parsed.ok && parsed.value !== null ? parsed : { ok: false }
 }
-
-
 
 /**
 
@@ -257,266 +218,209 @@ return parsed.ok && parsed.value !== null ? parsed : { ok: false }
 */
 
 export function buildInverseRequest(
+  form: InverseFormState,
 
-form: InverseFormState,
-
-context: InverseContext,
-
+  context: InverseContext,
 ): InverseBuildResult {
+  const errors: string[] = []
 
-const errors: string[] = []
+  const { input, vehicle } = context
 
-const { input, vehicle } = context
+  if (form.registrationState === '') errors.push('Escolha a UF de registro do veículo.')
 
+  if (!form.purchaseFinanced && !form.purchaseCash) {
+    errors.push('Escolha pelo menos uma forma de compra: financiado ou à vista.')
+  }
 
+  const installments = [...new Set(form.installments)].sort((a, b) => a - b)
 
-if (form.registrationState === '') errors.push('Escolha a UF de registro do veículo.')
+  if (installments.length === 0) errors.push('Escolha pelo menos um prazo de financiamento.')
 
-if (!form.purchaseFinanced && !form.purchaseCash) {
+  const rate = parseRequired(form.monthlyRatePct)
 
-errors.push('Escolha pelo menos uma forma de compra: financiado ou à vista.')
+  if (!rate.ok) errors.push('Informe a taxa mensal de financiamento (use 0 se não houver juros).')
 
-}
+  const maxDownPayment = parseOptional(form.maxDownPayment)
 
-const installments = [...new Set(form.installments)].sort((a, b) => a - b)
+  const maxInstallment = parseOptional(form.maxInstallment)
 
-if (installments.length === 0) errors.push('Escolha pelo menos um prazo de financiamento.')
+  const maxMonthlyTotal = parseOptional(form.maxMonthlyTotal)
 
+  if (!maxDownPayment.ok) errors.push('O teto da entrada precisa ser um valor positivo ou vazio.')
 
+  if (!maxInstallment.ok) errors.push('O teto da parcela precisa ser um valor positivo ou vazio.')
 
-const rate = parseRequired(form.monthlyRatePct)
+  if (!maxMonthlyTotal.ok)
+    errors.push('O teto do custo mensal precisa ser um valor positivo ou vazio.')
 
-if (!rate.ok) errors.push('Informe a taxa mensal de financiamento (use 0 se não houver juros).')
+  const personalDown = parseOptional(form.personalDownPayment)
 
+  const personalInst = parseOptional(form.personalInstallments)
 
+  const personalFilled =
+    form.personalDownPayment.trim() !== '' || form.personalInstallments.trim() !== ''
 
-const maxDownPayment = parseOptional(form.maxDownPayment)
+  let personalized: InverseRequest['personalized'] = null
 
-const maxInstallment = parseOptional(form.maxInstallment)
+  if (personalFilled) {
+    if (
+      !personalDown.ok ||
+      personalDown.value === null ||
+      !personalInst.ok ||
+      personalInst.value === null
+    ) {
+      errors.push('Para a combinação personalizada, informe entrada e prazo válidos.')
+    } else if (personalInst.value < 1) {
+      errors.push('O prazo personalizado precisa ser de pelo menos 1 mês.')
+    } else {
+      personalized = {
+        downPayment: personalDown.value,
 
-const maxMonthlyTotal = parseOptional(form.maxMonthlyTotal)
+        installments: Math.round(personalInst.value),
+      }
+    }
+  }
 
-if (!maxDownPayment.ok) errors.push('O teto da entrada precisa ser um valor positivo ou vazio.')
+  // Renda: quando informada, todos os campos financeiros são obrigatórios.
 
-if (!maxInstallment.ok) errors.push('O teto da parcela precisa ser um valor positivo ou vazio.')
+  const required = {
+    netIncome: parseRequired(form.netIncome),
 
-if (!maxMonthlyTotal.ok)
+    fixedExpenses: parseRequired(form.fixedExpenses),
 
-errors.push('O teto do custo mensal precisa ser um valor positivo ou vazio.')
+    otherRecurringExpenses: parseRequired(form.otherRecurringExpenses),
 
+    otherDebts: parseRequired(form.otherDebts),
 
+    monthlyReserve: parseRequired(form.monthlyReserve),
 
-const personalDown = parseOptional(form.personalDownPayment)
+    reserve: parseRequired(form.reserve),
 
-const personalInst = parseOptional(form.personalInstallments)
+    accumulatedReserve: parseRequired(form.accumulatedReserve),
+  }
 
-const personalFilled =
+  const labels: Record<keyof typeof required, string> = {
+    netIncome: 'a renda líquida mensal',
 
-form.personalDownPayment.trim() !== '' || form.personalInstallments.trim() !== ''
+    fixedExpenses: 'as despesas essenciais mensais',
 
-let personalized: InverseRequest['personalized'] = null
+    otherRecurringExpenses: 'as outras despesas recorrentes',
 
-if (personalFilled) {
+    otherDebts: 'as dívidas mensais',
 
-if (
+    monthlyReserve: 'a reserva mensal',
 
-!personalDown.ok ||
+    reserve: 'a reserva mínima a preservar',
 
-personalDown.value === null ||
+    accumulatedReserve: 'a reserva acumulada',
+  }
 
-!personalInst.ok ||
+  if (form.hasIncome) {
+    for (const key of Object.keys(required) as (keyof typeof required)[]) {
+      if (!required[key].ok) {
+        errors.push(`Informe ${labels[key]} (use 0 se não houver).`)
+      }
+    }
 
-personalInst.value === null
+    const netIncome = required.netIncome
 
-) {
+    if (netIncome.ok && netIncome.value !== null && netIncome.value <= 0) {
+      errors.push('A renda líquida precisa ser maior que zero para avaliar o orçamento.')
+    }
+  }
+  if (errors.length > 0 || !rate.ok) {
+    return { ok: false, errors }
+  }
 
-errors.push('Para a combinação personalizada, informe entrada e prazo válidos.')
+  // Mesmo cenário da simulação atual (inclusive o personalizado), ou o equilibrado por padrão.
 
-} else if (personalInst.value < 1) {
+  const scenario = resolveScenario(input?.objective ?? DEMO_INPUT.objective)
 
-errors.push('O prazo personalizado precisa ser de pelo menos 1 mês.')
+  const numeric = (parsed: Parsed) => (parsed.ok && parsed.value !== null ? parsed.value : 0)
 
-} else {
+  const finance: FinanceInput = {
+    netIncome: numeric(required.netIncome),
 
-personalized = {
+    fixedExpenses: numeric(required.fixedExpenses),
 
-downPayment: personalDown.value,
+    otherRecurringExpenses: numeric(required.otherRecurringExpenses),
 
-installments: Math.round(personalInst.value),
+    otherDebts: numeric(required.otherDebts),
 
-}
+    monthlyReserve: numeric(required.monthlyReserve),
 
-}
+    // Entrada é definida em cada combinação; este valor não é usado na busca.
 
-}
+    downPayment: 0,
 
+    reserve: numeric(required.reserve),
 
+    accumulatedReserve: numeric(required.accumulatedReserve),
 
-// Renda: quando informada, todos os campos financeiros são obrigatórios.
+    reserveMonths: 0,
 
-const required = {
+    safetyMarginMonthly: 0,
 
-netIncome: parseRequired(form.netIncome),
+    limitMode: 'estimado',
 
-fixedExpenses: parseRequired(form.fixedExpenses),
+    vehicleSharePct: null,
 
-otherRecurringExpenses: parseRequired(form.otherRecurringExpenses),
+    useFullDownPayment: false,
 
-otherDebts: parseRequired(form.otherDebts),
+    maxMonthlyVehicleSpend: 0,
 
-monthlyReserve: parseRequired(form.monthlyReserve),
+    installments: installments[0] ?? 48,
 
-reserve: parseRequired(form.reserve),
+    monthlyRatePct: rate.value ?? 0,
 
-accumulatedReserve: parseRequired(form.accumulatedReserve),
+    maxInstallment: maxInstallment.ok ? maxInstallment.value : null,
+  }
 
-}
+  const purchaseModes: InversePurchaseMode[] = []
 
-const labels: Record<keyof typeof required, string> = {
+  if (form.purchaseFinanced) purchaseModes.push('financiado')
 
-netIncome: 'a renda líquida mensal',
+  if (form.purchaseCash) purchaseModes.push('avista')
 
-fixedExpenses: 'as despesas essenciais mensais',
+  const request: InverseRequest = {
+    vehicle,
 
-otherRecurringExpenses: 'as outras despesas recorrentes',
+    registrationState: form.registrationState as BrazilianStateCode,
 
-otherDebts: 'as dívidas mensais',
+    condition: form.condition,
 
-monthlyReserve: 'a reserva mensal',
+    usage: (input ?? DEMO_INPUT).usage,
 
-reserve: 'a reserva mínima a preservar',
+    fuelPreference: (input ?? DEMO_INPUT).preferences.fuel,
 
-accumulatedReserve: 'a reserva acumulada',
+    assumptions: resolveAssumptions(input?.assumptionOverrides ?? {}),
 
-}
+    scenario,
 
-if (form.hasIncome) {
+    referenceYear: context.referenceYear,
 
-for (const key of Object.keys(required) as (keyof typeof required)[]) {
+    horizonMonths: form.horizonMonths,
 
-if (!required[key].ok) {
+    allowDemonstrativeTax: form.allowDemonstrativeTax,
 
-errors.push(`Informe ${labels[key]} (use 0 se não houver).`)
+    finance,
 
-}
+    hasIncome: form.hasIncome,
 
-}
+    purchaseModes,
 
-const netIncome = required.netIncome
+    amortization: form.amortization,
 
-if (netIncome.ok && netIncome.value !== null && netIncome.value <= 0) {
+    installmentOptions: installments,
 
-errors.push('A renda líquida precisa ser maior que zero para avaliar o orçamento.')
+    downPaymentOptions: [],
 
-}
+    maxDownPayment: maxDownPayment.ok ? maxDownPayment.value : null,
 
-}
-if (errors.length > 0 || !rate.ok) {
+    maxMonthlyTotal: maxMonthlyTotal.ok ? maxMonthlyTotal.value : null,
 
-return { ok: false, errors }
+    personalized,
+  }
 
-}
-
-
-
-// Mesmo cenário da simulação atual (inclusive o personalizado), ou o equilibrado por padrão.
-
-const scenario = resolveScenario(input?.objective ?? DEMO_INPUT.objective)
-
-const numeric = (parsed: Parsed) => (parsed.ok && parsed.value !== null ? parsed.value : 0)
-
-const finance: FinanceInput = {
-
-netIncome: numeric(required.netIncome),
-
-fixedExpenses: numeric(required.fixedExpenses),
-
-otherRecurringExpenses: numeric(required.otherRecurringExpenses),
-
-otherDebts: numeric(required.otherDebts),
-
-monthlyReserve: numeric(required.monthlyReserve),
-
-// Entrada é definida em cada combinação; este valor não é usado na busca.
-
-downPayment: 0,
-
-reserve: numeric(required.reserve),
-
-accumulatedReserve: numeric(required.accumulatedReserve),
-
-reserveMonths: 0,
-
-safetyMarginMonthly: 0,
-
-limitMode: 'estimado',
-
-vehicleSharePct: null,
-
-useFullDownPayment: false,
-
-maxMonthlyVehicleSpend: 0,
-
-installments: installments[0] ?? 48,
-
-monthlyRatePct: rate.value ?? 0,
-
-maxInstallment: maxInstallment.ok ? maxInstallment.value : null,
-
-}
-
-
-
-const purchaseModes: InversePurchaseMode[] = []
-
-if (form.purchaseFinanced) purchaseModes.push('financiado')
-
-if (form.purchaseCash) purchaseModes.push('avista')
-
-
-
-const request: InverseRequest = {
-
-vehicle,
-
-registrationState: form.registrationState as BrazilianStateCode,
-
-condition: form.condition,
-
-usage: (input ?? DEMO_INPUT).usage,
-
-fuelPreference: (input ?? DEMO_INPUT).preferences.fuel,
-
-assumptions: resolveAssumptions(input?.assumptionOverrides ?? {}),
-
-scenario,
-
-referenceYear: context.referenceYear,
-
-horizonMonths: form.horizonMonths,
-
-allowDemonstrativeTax: form.allowDemonstrativeTax,
-
-finance,
-
-hasIncome: form.hasIncome,
-
-purchaseModes,
-
-amortization: form.amortization,
-
-installmentOptions: installments,
-
-downPaymentOptions: [],
-
-maxDownPayment: maxDownPayment.ok ? maxDownPayment.value : null,
-
-maxMonthlyTotal: maxMonthlyTotal.ok ? maxMonthlyTotal.value : null,
-
-personalized,
-
-}
-
-return { ok: true, request }
-
+  return { ok: true, request }
 }

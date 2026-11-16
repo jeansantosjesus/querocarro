@@ -9,209 +9,127 @@
 */
 
 export interface TtlCache {
+  get(key: string): unknown
 
-get(key: string): unknown
+  set(key: string, value: unknown, ttlMs: number): void
 
-set(key: string, value: unknown, ttlMs: number): void
+  delete(key: string): void
 
-delete(key: string): void
-
-clear(): void
-
+  clear(): void
 }
-
-
 
 interface Entry {
+  expiresAt: number
 
-expiresAt: number
-
-value: unknown
-
+  value: unknown
 }
-
-
 
 export class MemoryTtlCache implements TtlCache {
+  private readonly store = new Map<string, Entry>()
 
-private readonly store = new Map<string, Entry>()
+  constructor(private readonly now: () => number = Date.now) {}
 
+  get(key: string): unknown {
+    const entry = this.store.get(key)
 
+    if (!entry) return undefined
 
-constructor(private readonly now: () => number = Date.now) {}
+    if (entry.expiresAt <= this.now()) {
+      this.store.delete(key)
 
+      return undefined
+    }
 
+    return entry.value
+  }
 
-get(key: string): unknown {
+  set(key: string, value: unknown, ttlMs: number): void {
+    this.store.set(key, { value, expiresAt: this.now() + ttlMs })
+  }
 
-const entry = this.store.get(key)
+  delete(key: string): void {
+    this.store.delete(key)
+  }
 
-if (!entry) return undefined
-
-if (entry.expiresAt <= this.now()) {
-
-this.store.delete(key)
-
-return undefined
-
+  clear(): void {
+    this.store.clear()
+  }
 }
-
-return entry.value
-
-}
-
-
-
-set(key: string, value: unknown, ttlMs: number): void {
-
-this.store.set(key, { value, expiresAt: this.now() + ttlMs })
-
-}
-
-
-
-delete(key: string): void {
-
-this.store.delete(key)
-
-}
-
-
-
-clear(): void {
-
-this.store.clear()
-
-}
-
-}
-
-
 
 /** Cache persistido em Storage (localStorage). Falhas de quota/JSON são silenciosas. */
 
 export class StorageTtlCache implements TtlCache {
+  constructor(
+    private readonly storage: Storage,
 
-constructor(
+    private readonly prefix = 'qc:fipe:v1:',
 
-private readonly storage: Storage,
+    private readonly now: () => number = Date.now,
+  ) {}
 
-private readonly prefix = 'qc:fipe:v1:',
+  get(key: string): unknown {
+    try {
+      const raw = this.storage.getItem(this.prefix + key)
 
-private readonly now: () => number = Date.now,
+      if (!raw) return undefined
 
-) {}
+      const entry = JSON.parse(raw) as Entry
 
+      if (typeof entry?.expiresAt !== 'number' || entry.expiresAt <= this.now()) {
+        this.storage.removeItem(this.prefix + key)
 
+        return undefined
+      }
 
-get(key: string): unknown {
+      return entry.value
+    } catch {
+      return undefined
+    }
+  }
 
-try {
+  set(key: string, value: unknown, ttlMs: number): void {
+    try {
+      const entry: Entry = { value, expiresAt: this.now() + ttlMs }
 
-const raw = this.storage.getItem(this.prefix + key)
+      this.storage.setItem(this.prefix + key, JSON.stringify(entry))
+    } catch {
+      // quota excedida ou storage indisponível: o cache é apenas otimização
+    }
+  }
 
-if (!raw) return undefined
+  delete(key: string): void {
+    try {
+      this.storage.removeItem(this.prefix + key)
+    } catch {
+      // ignora
+    }
+  }
 
-const entry = JSON.parse(raw) as Entry
+  clear(): void {
+    try {
+      const keys: string[] = []
 
-if (typeof entry?.expiresAt !== 'number' || entry.expiresAt <= this.now()) {
+      for (let index = 0; index < this.storage.length; index += 1) {
+        const key = this.storage.key(index)
 
-this.storage.removeItem(this.prefix + key)
+        if (key?.startsWith(this.prefix)) keys.push(key)
+      }
 
-return undefined
-
+      keys.forEach((key) => this.storage.removeItem(key))
+    } catch {
+      // ignora
+    }
+  }
 }
-
-return entry.value
-
-} catch {
-
-return undefined
-
-}
-
-}
-
-
-
-set(key: string, value: unknown, ttlMs: number): void {
-
-try {
-
-const entry: Entry = { value, expiresAt: this.now() + ttlMs }
-
-this.storage.setItem(this.prefix + key, JSON.stringify(entry))
-
-} catch {
-
-// quota excedida ou storage indisponível: o cache é apenas otimização
-
-}
-
-}
-
-
-
-delete(key: string): void {
-
-try {
-
-this.storage.removeItem(this.prefix + key)
-
-} catch {
-
-// ignora
-
-}
-
-}
-
-
-
-clear(): void {
-
-try {
-
-const keys: string[] = []
-
-for (let index = 0; index < this.storage.length; index += 1) {
-
-const key = this.storage.key(index)
-
-if (key?.startsWith(this.prefix)) keys.push(key)
-
-}
-
-keys.forEach((key) => this.storage.removeItem(key))
-
-} catch {
-
-// ignora
-
-}
-
-}
-
-}
-
-
 
 export function createDefaultFipeCache(): TtlCache {
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      return new StorageTtlCache(window.localStorage)
+    }
+  } catch {
+    // acesso ao storage pode lançar em navegação privada restrita
+  }
 
-try {
-
-if (typeof window !== 'undefined' && window.localStorage) {
-
-return new StorageTtlCache(window.localStorage)
-
-}
-
-} catch {
-
-// acesso ao storage pode lançar em navegação privada restrita
-
-}
-
-return new MemoryTtlCache()
-
+  return new MemoryTtlCache()
 }

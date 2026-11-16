@@ -18,451 +18,320 @@ import { formatBRL } from '../../../utils/format'
 
 import { NumberField } from './NumberField'
 
-
-
 export function StepFinance() {
+  const {
+    watch,
 
-const {
+    register,
 
-watch,
+    formState: { errors },
+  } = useFormContext<SimulationInput>()
 
-register,
+  const purchaseMode = watch('objective.purchaseMode')
 
-formState: { errors },
+  const registrationState = watch('registrationState')
 
-} = useFormContext<SimulationInput>()
+  const stateError = get(errors, 'registrationState') as { message?: string } | undefined
 
-const purchaseMode = watch('objective.purchaseMode')
+  const hasCatalogRule =
+    typeof registrationState === 'string' &&
+    isBrazilianStateCode(registrationState) &&
+    stateHasUsableCatalogRule(registrationState)
 
-const registrationState = watch('registrationState')
+  const limitMode = watch('finance.limitMode')
 
-const stateError = get(errors, 'registrationState') as { message?: string } | undefined
+  const income = Number(watch('finance.netIncome'))
 
-const hasCatalogRule =
+  const fixed = Number(watch('finance.fixedExpenses'))
 
-typeof registrationState === 'string' &&
+  const other = Number(watch('finance.otherRecurringExpenses'))
 
-isBrazilianStateCode(registrationState) &&
+  const debts = Number(watch('finance.otherDebts'))
 
-stateHasUsableCatalogRule(registrationState)
+  const monthlyReserve = Number(watch('finance.monthlyReserve'))
 
-const limitMode = watch('finance.limitMode')
+  const available = [income, fixed, other, debts, monthlyReserve].every(Number.isFinite)
+    ? income - fixed - other - debts - monthlyReserve
+    : null
 
-const income = Number(watch('finance.netIncome'))
+  return (
+    <div className="space-y-6">
+      <Alert tone="info" title="Seus dados financeiros ficam só nesta sessão">
+        Os valores abaixo são usados apenas para calcular indicadores derivados (como
+        comprometimento e margem). A renda não é critério de comparação entre veículos. Você escolhe
+        se quer salvar a simulação no histórico ao final.
+      </Alert>
 
-const fixed = Number(watch('finance.fixedExpenses'))
+      <Field
+        label="Em qual estado o veículo será registrado?"
 
-const other = Number(watch('finance.otherRecurringExpenses'))
+        required
 
-const debts = Number(watch('finance.otherDebts'))
+        error={stateError?.message}
 
-const monthlyReserve = Number(watch('finance.monthlyReserve'))
+        hint="O QC não escolhe o estado por você. Só a Bahia tem regra de demonstração. Nas outras UFs, informe a alíquota na revisão ou marque a estimativa abaixo."
+      >
+        {(props) => (
+          <select {...props} className="qc-input" {...register('registrationState')}>
+            <option value="">Selecione o estado</option>
 
-const available = [income, fixed, other, debts, monthlyReserve].every(Number.isFinite)
+            {BRAZILIAN_STATES.map((state) => (
+              <option key={state.code} value={state.code}>
+                {state.code} — {state.name}
+              </option>
+            ))}
+          </select>
+        )}
+      </Field>
 
-? income - fixed - other - debts - monthlyReserve
+      {registrationState && !hasCatalogRule ? (
+        <div className="space-y-3">
+          <Alert tone="warn" title="Sem regra cadastrada para este estado">
+            Não há alíquota verificada nem de demonstração. O IPVA fica indisponível até você
+            informar o percentual na revisão ou marcar a estimativa de demonstração. Essa estimativa
+            não é a alíquota oficial do estado.
+          </Alert>
 
-: null
+          <label className="flex items-start gap-2 text-sm">
+            <input
+              type="checkbox"
 
+              className="mt-0.5 size-5"
 
+              {...register('allowDemonstrativeTax')}
+            />
 
-return (
+            <span>Usar a estimativa de demonstração para o IPVA deste estado.</span>
+          </label>
+        </div>
+      ) : null}
 
-<div className="space-y-6">
+      <fieldset className="space-y-6">
+        <legend className="text-lg font-bold">Mensal</legend>
 
-<Alert tone="info" title="Seus dados financeiros ficam só nesta sessão">
+        <div className="grid gap-6 sm:grid-cols-2">
+          <NumberField
+            name="finance.netIncome"
 
-Os valores abaixo são usados apenas para calcular indicadores derivados (como
+            label="Renda líquida mensal (R$)"
 
-comprometimento e margem). A renda não é critério de comparação entre veículos. Você escolhe
+            min={INPUT_LIMITS.income.min}
+          />
 
-se quer salvar a simulação no histórico ao final.
+          <NumberField
+            name="finance.fixedExpenses"
 
-</Alert>
+            label="Despesas fixas mensais (R$)"
 
+            min={0}
 
+            hint="Moradia, alimentação, contas etc."
+          />
 
-<Field
+          <NumberField
+            name="finance.otherRecurringExpenses"
 
-label="Em qual estado o veículo será registrado?"
+            label="Outras despesas recorrentes (R$)"
 
-required
+            min={0}
 
-error={stateError?.message}
+            hint="Use 0 se não houver. Entram na renda disponível."
+          />
 
-hint="O QC não escolhe o estado por você. Só a Bahia tem regra de demonstração. Nas outras UFs, informe a alíquota na revisão ou marque a estimativa abaixo."
+          <NumberField
+            name="finance.otherDebts"
 
->
+            label="Outras dívidas mensais (R$)"
 
-{(props) => (
+            min={0}
 
-<select {...props} className="qc-input" {...register('registrationState')}>
+            hint="Parcelas já assumidas. Use 0 se não houver."
+          />
 
-<option value="">Selecione o estado</option>
+          <NumberField
+            name="finance.monthlyReserve"
 
-{BRAZILIAN_STATES.map((state) => (
+            label="Reserva mensal planejada (R$)"
 
-<option key={state.code} value={state.code}>
+            min={0}
 
-{state.code} — {state.name}
+            hint="Valor que você pretende guardar todo mês. É descontado da renda disponível."
+          />
 
-</option>
+          <NumberField
+            name="finance.safetyMarginMonthly"
 
-))}
+            label="Margem de segurança mensal (R$)"
 
-</select>
+            min={0}
 
-)}
+            hint="Fica fora do orçamento do veículo."
+          />
+        </div>
 
-</Field>
+        <fieldset className="space-y-3">
+          <legend className="font-semibold">Limite mensal do veículo</legend>
 
+          <label className="flex items-center gap-2 text-sm">
+            <input type="radio" value="informado" {...register('finance.limitMode')} />
+            Quero informar meu limite
+          </label>
 
+          <label className="flex items-center gap-2 text-sm">
+            <input type="radio" value="estimado" {...register('finance.limitMode')} />
+            Quero que o QC estime um limite
+          </label>
 
-{registrationState && !hasCatalogRule ? (
+          <NumberField
+            name="finance.maxMonthlyVehicleSpend"
 
-<div className="space-y-3">
+            label="Gasto mensal máximo desejado com o veículo (R$)"
 
-<Alert tone="warn" title="Sem regra cadastrada para este estado">
+            min={1}
 
-Não há alíquota verificada nem de demonstração. O IPVA fica indisponível até você
+            hint={
+              limitMode === 'estimado'
+                ? 'Neste modo o QC ignora este valor e estima o limite pela renda disponível. Não é uma regra universal.'
+                : 'O QC usa o menor valor entre este limite e o calculado pela renda disponível.'
+            }
+          />
 
-informar o percentual na revisão ou marcar a estimativa de demonstração. Essa estimativa
+          <NumberField
+            name="finance.vehicleSharePct"
 
-não é a alíquota oficial do estado.
+            label="Percentual da renda disponível destinado ao veículo (%)"
 
-</Alert>
+            optional
 
-<label className="flex items-start gap-2 text-sm">
+            min={VEHICLE_SHARE_LIMITS.min}
 
-<input
+            max={VEHICLE_SHARE_LIMITS.max}
 
-type="checkbox"
+            hint="Opcional. Em branco, usa a premissa do cenário: 40%, 35% ou 25%."
+          />
+        </fieldset>
 
-className="mt-0.5 size-5"
+        {available !== null ? (
+          <p className="rounded-xl bg-ink-100 p-3 text-sm" aria-live="polite">
+            Renda disponível estimada (renda − essenciais − outras despesas − dívidas − reserva
+            mensal): <strong>{formatBRL(available)}</strong>
+            {available <= 0
+              ? ' — a pressão financeira é crítica e não há capacidade de compra positiva.'
+              : ''}
+          </p>
+        ) : null}
+      </fieldset>
+      <fieldset className="space-y-6">
+        <legend className="text-lg font-bold">Entrada e reserva</legend>
 
-{...register('allowDemonstrativeTax')}
+        <div className="grid gap-6 sm:grid-cols-2">
+          <NumberField
+            name="finance.downPayment"
 
-/>
+            label={
+              purchaseMode === 'avista'
+                ? 'Valor total disponível para a compra (R$)'
+                : 'Valor disponível para entrada (R$)'
+            }
 
-<span>Usar a estimativa de demonstração para o IPVA deste estado.</span>
+            min={0}
 
-</label>
+            hint={
+              purchaseMode === 'avista'
+                ? 'Veículos com preço de referência acima deste valor não entram na análise.'
+                : 'Se for maior que o preço do veículo, usamos só o necessário.'
+            }
+          />
 
-</div>
+          <NumberField
+            name="finance.reserve"
 
-) : null}
+            label="Reserva de emergência a preservar (R$)"
 
+            min={0}
 
+            hint="Não pode ser usada na entrada, salvo se você confirmar abaixo."
+          />
 
-<fieldset className="space-y-6">
+          <NumberField
+            name="finance.accumulatedReserve"
 
-<legend className="text-lg font-bold">Mensal</legend>
+            label="Reserva acumulada (R$)"
 
-<div className="grid gap-6 sm:grid-cols-2">
+            min={0}
 
-<NumberField
+            hint="Saldo disponível hoje. A entrada só usa o que sobra depois da reserva protegida."
+          />
 
-name="finance.netIncome"
+          <NumberField
+            name="finance.reserveMonths"
 
-label="Renda líquida mensal (R$)"
+            label="Meses de despesas essenciais a proteger"
 
-min={INPUT_LIMITS.income.min}
+            step="1"
 
-/>
+            min={0}
 
-<NumberField
+            max={36}
 
-name="finance.fixedExpenses"
+            hint="A proteção é o maior valor entre a reserva informada e despesas essenciais × meses."
+          />
+        </div>
 
-label="Despesas fixas mensais (R$)"
+        <label className="flex items-start gap-2 text-sm">
+          <input type="checkbox" className="mt-1" {...register('finance.useFullDownPayment')} />
 
-min={0}
+          <span>Usar a entrada informada mesmo que isso reduza a reserva protegida.</span>
+        </label>
+      </fieldset>
 
-hint="Moradia, alimentação, contas etc."
+      {purchaseMode === 'financiado' ? (
+        <fieldset className="space-y-6">
+          <legend className="text-lg font-bold">Financiamento (simulação)</legend>
 
-/>
+          <div className="grid gap-6 sm:grid-cols-3">
+            <NumberField
+              name="finance.installments"
 
-<NumberField
+              label="Prazo (meses)"
 
-name="finance.otherRecurringExpenses"
+              step="1"
 
-label="Outras despesas recorrentes (R$)"
+              min={INPUT_LIMITS.installments.min}
 
-min={0}
+              max={INPUT_LIMITS.installments.max}
+            />
 
-hint="Use 0 se não houver. Entram na renda disponível."
+            <NumberField
+              name="finance.monthlyRatePct"
 
-/>
+              label="Taxa de juros (% ao mês)"
 
-<NumberField
+              min={0}
 
-name="finance.otherDebts"
+              max={INPUT_LIMITS.monthlyRatePct.max}
 
-label="Outras dívidas mensais (R$)"
+              hint="Use a taxa de uma proposta real. 0 = sem juros."
+            />
 
-min={0}
+            <NumberField
+              name="finance.maxInstallment"
 
-hint="Parcelas já assumidas. Use 0 se não houver."
+              label="Parcela máxima (R$, opcional)"
 
-/>
+              optional
 
-<NumberField
+              min={0}
 
-name="finance.monthlyReserve"
-
-label="Reserva mensal planejada (R$)"
-
-min={0}
-
-hint="Valor que você pretende guardar todo mês. É descontado da renda disponível."
-
-/>
-
-<NumberField
-
-name="finance.safetyMarginMonthly"
-
-label="Margem de segurança mensal (R$)"
-
-min={0}
-
-hint="Fica fora do orçamento do veículo."
-
-/>
-
-</div>
-
-<fieldset className="space-y-3">
-
-<legend className="font-semibold">Limite mensal do veículo</legend>
-
-<label className="flex items-center gap-2 text-sm">
-
-<input type="radio" value="informado" {...register('finance.limitMode')} />
-
-Quero informar meu limite
-
-</label>
-
-<label className="flex items-center gap-2 text-sm">
-
-<input type="radio" value="estimado" {...register('finance.limitMode')} />
-
-Quero que o QC estime um limite
-
-</label>
-
-<NumberField
-
-name="finance.maxMonthlyVehicleSpend"
-
-label="Gasto mensal máximo desejado com o veículo (R$)"
-
-min={1}
-
-hint={
-
-limitMode === 'estimado'
-
-? 'Neste modo o QC ignora este valor e estima o limite pela renda disponível. Não é uma regra universal.'
-
-: 'O QC usa o menor valor entre este limite e o calculado pela renda disponível.'
-
-}
-
-/>
-
-<NumberField
-
-name="finance.vehicleSharePct"
-
-label="Percentual da renda disponível destinado ao veículo (%)"
-
-optional
-
-min={VEHICLE_SHARE_LIMITS.min}
-
-max={VEHICLE_SHARE_LIMITS.max}
-
-hint="Opcional. Em branco, usa a premissa do cenário: 40%, 35% ou 25%."
-
-/>
-
-</fieldset>
-
-{available !== null ? (
-
-<p className="rounded-xl bg-ink-100 p-3 text-sm" aria-live="polite">
-
-Renda disponível estimada (renda − essenciais − outras despesas − dívidas − reserva
-
-mensal): <strong>{formatBRL(available)}</strong>
-
-{available <= 0
-
-? ' — a pressão financeira é crítica e não há capacidade de compra positiva.'
-
-: ''}
-
-</p>
-
-) : null}
-
-</fieldset>
-<fieldset className="space-y-6">
-
-<legend className="text-lg font-bold">Entrada e reserva</legend>
-
-<div className="grid gap-6 sm:grid-cols-2">
-
-<NumberField
-
-name="finance.downPayment"
-
-label={
-
-purchaseMode === 'avista'
-
-? 'Valor total disponível para a compra (R$)'
-
-: 'Valor disponível para entrada (R$)'
-
-}
-
-min={0}
-
-hint={
-
-purchaseMode === 'avista'
-
-? 'Veículos com preço de referência acima deste valor não entram na análise.'
-
-: 'Se for maior que o preço do veículo, usamos só o necessário.'
-
-}
-
-/>
-
-<NumberField
-
-name="finance.reserve"
-
-label="Reserva de emergência a preservar (R$)"
-
-min={0}
-
-hint="Não pode ser usada na entrada, salvo se você confirmar abaixo."
-
-/>
-
-<NumberField
-
-name="finance.accumulatedReserve"
-
-label="Reserva acumulada (R$)"
-
-min={0}
-
-hint="Saldo disponível hoje. A entrada só usa o que sobra depois da reserva protegida."
-
-/>
-
-<NumberField
-
-name="finance.reserveMonths"
-
-label="Meses de despesas essenciais a proteger"
-
-step="1"
-
-min={0}
-
-max={36}
-
-hint="A proteção é o maior valor entre a reserva informada e despesas essenciais × meses."
-
-/>
-
-</div>
-
-<label className="flex items-start gap-2 text-sm">
-
-<input type="checkbox" className="mt-1" {...register('finance.useFullDownPayment')} />
-
-<span>Usar a entrada informada mesmo que isso reduza a reserva protegida.</span>
-
-</label>
-
-</fieldset>
-
-
-
-{purchaseMode === 'financiado' ? (
-
-<fieldset className="space-y-6">
-
-<legend className="text-lg font-bold">Financiamento (simulação)</legend>
-
-<div className="grid gap-6 sm:grid-cols-3">
-
-<NumberField
-
-name="finance.installments"
-
-label="Prazo (meses)"
-
-step="1"
-
-min={INPUT_LIMITS.installments.min}
-
-max={INPUT_LIMITS.installments.max}
-
-/>
-
-<NumberField
-
-name="finance.monthlyRatePct"
-
-label="Taxa de juros (% ao mês)"
-
-min={0}
-
-max={INPUT_LIMITS.monthlyRatePct.max}
-
-hint="Use a taxa de uma proposta real. 0 = sem juros."
-
-/>
-
-<NumberField
-
-name="finance.maxInstallment"
-
-label="Parcela máxima (R$, opcional)"
-
-optional
-
-min={0}
-
-hint="Em branco = sem limite de parcela."
-
-/>
-
-</div>
-
-</fieldset>
-
-) : (
-
-<Alert tone="info">
-
-Compra à vista: não há parcela. O valor da entrada é usado como recurso para a compra.
-
-</Alert>
-
-)}
-
-</div>
-
-)
-
+              hint="Em branco = sem limite de parcela."
+            />
+          </div>
+        </fieldset>
+      ) : (
+        <Alert tone="info">
+          Compra à vista: não há parcela. O valor da entrada é usado como recurso para a compra.
+        </Alert>
+      )}
+    </div>
+  )
 }

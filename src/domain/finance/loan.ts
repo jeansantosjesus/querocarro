@@ -1,18 +1,12 @@
 /** Erro lançado quando parâmetros financeiros são inválidos (nunca produz NaN silencioso). */
 
 export class FinanceInputError extends Error {
+  constructor(message: string) {
+    super(message)
 
-constructor(message: string) {
-
-super(message)
-
-this.name = 'FinanceInputError'
-
+    this.name = 'FinanceInputError'
+  }
 }
-
-}
-
-
 
 /**
 
@@ -39,44 +33,32 @@ this.name = 'FinanceInputError'
 */
 
 export function calculateMonthlyPayment(
+  principal: number,
 
-principal: number,
+  monthlyRatePct: number,
 
-monthlyRatePct: number,
-
-installments: number,
-
+  installments: number,
 ): number {
+  if (!Number.isFinite(principal) || principal < 0) {
+    throw new FinanceInputError('O valor financiado deve ser um número maior ou igual a zero.')
+  }
 
-if (!Number.isFinite(principal) || principal < 0) {
+  if (!Number.isFinite(monthlyRatePct) || monthlyRatePct < 0) {
+    throw new FinanceInputError('A taxa de juros deve ser um número maior ou igual a zero.')
+  }
 
-throw new FinanceInputError('O valor financiado deve ser um número maior ou igual a zero.')
+  if (!Number.isInteger(installments) || installments < 1) {
+    throw new FinanceInputError('A quantidade de parcelas deve ser um inteiro maior ou igual a 1.')
+  }
 
+  if (principal === 0) return 0
+
+  if (monthlyRatePct === 0) return principal / installments
+
+  const rate = monthlyRatePct / 100
+
+  return (principal * rate) / (1 - Math.pow(1 + rate, -installments))
 }
-
-if (!Number.isFinite(monthlyRatePct) || monthlyRatePct < 0) {
-
-throw new FinanceInputError('A taxa de juros deve ser um número maior ou igual a zero.')
-
-}
-
-if (!Number.isInteger(installments) || installments < 1) {
-
-throw new FinanceInputError('A quantidade de parcelas deve ser um inteiro maior ou igual a 1.')
-
-}
-
-if (principal === 0) return 0
-
-if (monthlyRatePct === 0) return principal / installments
-
-const rate = monthlyRatePct / 100
-
-return (principal * rate) / (1 - Math.pow(1 + rate, -installments))
-
-}
-
-
 
 /**
 
@@ -91,57 +73,41 @@ return (principal * rate) / (1 - Math.pow(1 + rate, -installments))
 */
 
 export function calculateFinancedPrincipal(
+  payment: number,
 
-payment: number,
+  monthlyRatePct: number,
 
-monthlyRatePct: number,
-
-installments: number,
-
+  installments: number,
 ): number {
+  if (!Number.isFinite(payment) || payment < 0) {
+    throw new FinanceInputError('A parcela máxima deve ser um número maior ou igual a zero.')
+  }
 
-if (!Number.isFinite(payment) || payment < 0) {
+  if (!Number.isFinite(monthlyRatePct) || monthlyRatePct < 0) {
+    throw new FinanceInputError('A taxa de juros deve ser um número maior ou igual a zero.')
+  }
 
-throw new FinanceInputError('A parcela máxima deve ser um número maior ou igual a zero.')
+  if (!Number.isInteger(installments) || installments < 1) {
+    throw new FinanceInputError('A quantidade de parcelas deve ser um inteiro maior ou igual a 1.')
+  }
 
+  if (payment === 0) return 0
+
+  if (monthlyRatePct === 0) return payment * installments
+
+  const rate = monthlyRatePct / 100
+
+  return (payment * (1 - Math.pow(1 + rate, -installments))) / rate
 }
-
-if (!Number.isFinite(monthlyRatePct) || monthlyRatePct < 0) {
-
-throw new FinanceInputError('A taxa de juros deve ser um número maior ou igual a zero.')
-
-}
-
-if (!Number.isInteger(installments) || installments < 1) {
-
-throw new FinanceInputError('A quantidade de parcelas deve ser um inteiro maior ou igual a 1.')
-
-}
-
-if (payment === 0) return 0
-
-if (monthlyRatePct === 0) return payment * installments
-
-const rate = monthlyRatePct / 100
-
-return (payment * (1 - Math.pow(1 + rate, -installments))) / rate
-
-}
-
-
 
 /** Valor total pago ao final do financiamento (parcelas x quantidade). */
 
 export function totalPaidWithInterest(
+  principal: number,
 
-principal: number,
+  monthlyRatePct: number,
 
-monthlyRatePct: number,
-
-installments: number,
-
+  installments: number,
 ): number {
-
-return calculateMonthlyPayment(principal, monthlyRatePct, installments) * installments
-
+  return calculateMonthlyPayment(principal, monthlyRatePct, installments) * installments
 }

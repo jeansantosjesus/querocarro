@@ -6,93 +6,71 @@ import { htmlToPlainText, normalizeText } from '../../utils/text'
 
 import type { VehicleImage, VehicleImageProvider, VehicleImageQuery } from './types'
 
-
-
 /* -------------------------------------------------------------------------- */
 
 /* Validação da resposta (qualquer divergência vira "sem foto", nunca erro) */
 
 /* -------------------------------------------------------------------------- */
 
-
-
 const metadataValue = z.object({ value: z.union([z.string(), z.number()]).optional() }).loose()
-
-
 
 const imageInfoSchema = z
 
-.object({
+  .object({
+    thumburl: z.string().optional(),
 
-thumburl: z.string().optional(),
+    descriptionurl: z.string().optional(),
 
-descriptionurl: z.string().optional(),
+    width: z.number().optional(),
 
-width: z.number().optional(),
+    height: z.number().optional(),
 
-height: z.number().optional(),
+    mime: z.string().optional(),
 
-mime: z.string().optional(),
+    extmetadata: z
 
-extmetadata: z
+      .object({
+        LicenseShortName: metadataValue.optional(),
 
-.object({
+        LicenseUrl: metadataValue.optional(),
 
-LicenseShortName: metadataValue.optional(),
+        Artist: metadataValue.optional(),
 
-LicenseUrl: metadataValue.optional(),
+        AttributionRequired: metadataValue.optional(),
+      })
 
-Artist: metadataValue.optional(),
+      .loose()
 
-AttributionRequired: metadataValue.optional(),
+      .optional(),
+  })
 
-})
-
-.loose()
-
-.optional(),
-
-})
-
-.loose()
-
-
+  .loose()
 
 const pageSchema = z
 
-.object({
+  .object({
+    title: z.string(),
 
-title: z.string(),
+    imageinfo: z.array(imageInfoSchema).optional(),
+  })
 
-imageinfo: z.array(imageInfoSchema).optional(),
-
-})
-
-.loose()
-
-
+  .loose()
 
 const responseSchema = z
 
-.object({
+  .object({
+    query: z
 
-query: z
+      .object({ pages: z.record(z.string(), pageSchema) })
 
-.object({ pages: z.record(z.string(), pageSchema) })
+      .loose()
 
-.loose()
+      .optional(),
+  })
 
-.optional(),
-
-})
-
-.loose()
-
-
+  .loose()
 
 type WikimediaPage = z.infer<typeof pageSchema>
-
-
 
 /* -------------------------------------------------------------------------- */
 
@@ -100,75 +78,49 @@ type WikimediaPage = z.infer<typeof pageSchema>
 
 /* -------------------------------------------------------------------------- */
 
-
-
 const BRAND_ALIASES: Record<string, string[]> = {
+  volkswagen: ['vw'],
 
-volkswagen: ['vw'],
+  chevrolet: ['chevy', 'gm'],
 
-chevrolet: ['chevy', 'gm'],
-
-mercedes: ['mercedes-benz'],
-
+  mercedes: ['mercedes-benz'],
 }
-
-
 
 /** FIPE usa nomes como "VW - VolksWagen" ou "GM - Chevrolet": fica o nome comercial. */
 
 export function cleanBrandName(brand: string): string {
+  const parts = brand.split(' - ')
 
-const parts = brand.split(' - ')
+  const name = (parts[parts.length - 1] ?? brand).trim()
 
-const name = (parts[parts.length - 1] ?? brand).trim()
-
-return name.replace(/[^\p{L}\p{N} .&-]/gu, '').trim()
-
+  return name.replace(/[^\p{L}\p{N} .&-]/gu, '').trim()
 }
-
-
 
 /** "ARGO DRIVE 1.3 8V Flex Aut." -> "Argo": a família do modelo é a primeira palavra. */
 
 export function modelFamily(model: string): string {
+  const first = model.trim().split(/\s+/)[0] ?? ''
 
-const first = model.trim().split(/\s+/)[0] ?? ''
-
-return first.replace(/[^\p{L}\p{N}-]/gu, '')
-
+  return first.replace(/[^\p{L}\p{N}-]/gu, '')
 }
-
-
 
 export function buildSearchTerms(
-
-query: VehicleImageQuery,
-
+  query: VehicleImageQuery,
 ): { brand: string; family: string } | null {
+  const brand = cleanBrandName(query.brand)
 
-const brand = cleanBrandName(query.brand)
+  const family = modelFamily(query.model)
 
-const family = modelFamily(query.model)
+  if (brand.length < 2 || family.length < 2) return null
 
-if (brand.length < 2 || family.length < 2) return null
-
-return { brand, family }
-
+  return { brand, family }
 }
-
-
 
 function cacheKey(query: VehicleImageQuery): string {
-
-return normalizeText(
-
-`${cleanBrandName(query.brand)}|${modelFamily(query.model)}|${query.modelYear}`,
-
-)
-
+  return normalizeText(
+    `${cleanBrandName(query.brand)}|${modelFamily(query.model)}|${query.modelYear}`,
+  )
 }
-
-
 
 /* -------------------------------------------------------------------------- */
 
@@ -176,217 +128,150 @@ return normalizeText(
 
 /* -------------------------------------------------------------------------- */
 
-
-
 function isHttpsHost(value: string | undefined, hosts: readonly string[]): value is string {
+  if (!value) return false
 
-if (!value) return false
+  try {
+    const url = new URL(value)
 
-try {
-
-const url = new URL(value)
-
-return url.protocol === 'https:' && hosts.includes(url.hostname)
-
-} catch {
-
-return false
-
+    return url.protocol === 'https:' && hosts.includes(url.hostname)
+  } catch {
+    return false
+  }
 }
-
-}
-
-
 
 function safeLicenseUrl(value: string | undefined): string | null {
+  if (!value) return null
 
-if (!value) return null
+  try {
+    const url = new URL(value)
 
-try {
+    const allowed = ['creativecommons.org', IMAGE_CONFIG.pageHost]
 
-const url = new URL(value)
-
-const allowed = ['creativecommons.org', IMAGE_CONFIG.pageHost]
-
-return url.protocol === 'https:' && allowed.includes(url.hostname) ? url.toString() : null
-
-} catch {
-
-return null
-
+    return url.protocol === 'https:' && allowed.includes(url.hostname) ? url.toString() : null
+  } catch {
+    return null
+  }
 }
-
-}
-
-
 
 function metaText(entry: { value?: string | number | undefined } | undefined): string {
-
-return entry?.value === undefined ? '' : String(entry.value)
-
+  return entry?.value === undefined ? '' : String(entry.value)
 }
-
-
 
 export function isAllowedLicense(shortName: string): boolean {
+  const text = htmlToPlainText(shortName).trim()
 
-const text = htmlToPlainText(shortName).trim()
-
-return ALLOWED_LICENSE_PATTERNS.some((pattern) => pattern.test(text))
-
+  return ALLOWED_LICENSE_PATTERNS.some((pattern) => pattern.test(text))
 }
-
-
 
 function titleWithoutPrefix(title: string): string {
-
-return title.replace(/^file:/i, '')
-
+  return title.replace(/^file:/i, '')
 }
-
-
 
 /** Converte uma página da API em imagem válida e pontuada, ou `null` se algum requisito falhar. */
 
 export function evaluatePage(
+  page: WikimediaPage,
 
-page: WikimediaPage,
-
-query: VehicleImageQuery,
-
+  query: VehicleImageQuery,
 ): { image: VehicleImage; score: number } | null {
+  const terms = buildSearchTerms(query)
 
-const terms = buildSearchTerms(query)
+  const info = page.imageinfo?.[0]
 
-const info = page.imageinfo?.[0]
+  if (!terms || !info) return null
 
-if (!terms || !info) return null
+  const mime = info.mime ?? ''
 
+  if (!(IMAGE_CONFIG.allowedMime as readonly string[]).includes(mime)) return null
 
+  if (!isHttpsHost(info.thumburl, IMAGE_CONFIG.imageHosts)) return null
 
-const mime = info.mime ?? ''
+  if (!isHttpsHost(info.descriptionurl, [IMAGE_CONFIG.pageHost])) return null
 
-if (!(IMAGE_CONFIG.allowedMime as readonly string[]).includes(mime)) return null
+  const { width, height } = info
 
-if (!isHttpsHost(info.thumburl, IMAGE_CONFIG.imageHosts)) return null
+  if (!width || !height || width / height < IMAGE_CONFIG.minAspectRatio) return null
 
-if (!isHttpsHost(info.descriptionurl, [IMAGE_CONFIG.pageHost])) return null
+  const license = htmlToPlainText(metaText(info.extmetadata?.LicenseShortName))
 
+  if (!license || !isAllowedLicense(license)) return null
 
+  const title = titleWithoutPrefix(page.title)
 
-const { width, height } = info
+  const normalizedTitle = normalizeText(title)
 
-if (!width || !height || width / height < IMAGE_CONFIG.minAspectRatio) return null
+  const family = normalizeText(terms.family)
 
+  const brand = normalizeText(terms.brand)
 
+  const brandWords = [brand, ...(BRAND_ALIASES[brand] ?? [])]
 
-const license = htmlToPlainText(metaText(info.extmetadata?.LicenseShortName))
+  // Exige modelo e marca no título: evita fotos de outro carro ou de coisas sem relação.
 
-if (!license || !isAllowedLicense(license)) return null
+  if (!normalizedTitle.includes(family)) return null
 
+  if (!brandWords.some((word) => normalizedTitle.includes(word))) return null
 
+  if (IMAGE_TITLE_PENALTIES.some((pattern) => pattern.test(normalizedTitle))) return null
 
-const title = titleWithoutPrefix(page.title)
+  let score = 10
 
-const normalizedTitle = normalizeText(title)
+  if (normalizedTitle.includes(String(query.modelYear))) score += 4
 
-const family = normalizeText(terms.family)
+  const extraModelWords = normalizeText(query.model)
+    .split(' ')
 
-const brand = normalizeText(terms.brand)
+    .slice(1, 3)
 
-const brandWords = [brand, ...(BRAND_ALIASES[brand] ?? [])]
+    .filter((word) => word.length > 2 && /^\p{L}+$/u.test(word))
 
+  score += extraModelWords.filter((word) => normalizedTitle.includes(word)).length * 2
 
+  // Fotos mais largas costumam mostrar o carro inteiro.
 
-// Exige modelo e marca no título: evita fotos de outro carro ou de coisas sem relação.
+  score += Math.min(width / height, 2)
 
-if (!normalizedTitle.includes(family)) return null
+  const author = htmlToPlainText(metaText(info.extmetadata?.Artist)).slice(
+    0,
 
-if (!brandWords.some((word) => normalizedTitle.includes(word))) return null
+    IMAGE_CONFIG.maxAuthorLength,
+  )
 
-if (IMAGE_TITLE_PENALTIES.some((pattern) => pattern.test(normalizedTitle))) return null
+  return {
+    score,
 
+    image: {
+      url: info.thumburl,
 
+      pageUrl: info.descriptionurl,
 
-let score = 10
+      title: title.slice(0, IMAGE_CONFIG.maxTitleLength),
 
-if (normalizedTitle.includes(String(query.modelYear))) score += 4
+      author,
 
-const extraModelWords = normalizeText(query.model)
+      license: license.slice(0, 40),
 
-.split(' ')
-
-.slice(1, 3)
-
-.filter((word) => word.length > 2 && /^\p{L}+$/u.test(word))
-
-score += extraModelWords.filter((word) => normalizedTitle.includes(word)).length * 2
-
-// Fotos mais largas costumam mostrar o carro inteiro.
-
-score += Math.min(width / height, 2)
-
-
-
-const author = htmlToPlainText(metaText(info.extmetadata?.Artist)).slice(
-
-0,
-
-IMAGE_CONFIG.maxAuthorLength,
-
-)
-
-
-
-return {
-
-score,
-
-image: {
-
-url: info.thumburl,
-
-pageUrl: info.descriptionurl,
-
-title: title.slice(0, IMAGE_CONFIG.maxTitleLength),
-
-author,
-
-license: license.slice(0, 40),
-
-licenseUrl: safeLicenseUrl(metaText(info.extmetadata?.LicenseUrl)),
-
-},
-
+      licenseUrl: safeLicenseUrl(metaText(info.extmetadata?.LicenseUrl)),
+    },
+  }
 }
-
-}
-
-
 
 export function pickBestImage(
+  pages: readonly WikimediaPage[],
 
-pages: readonly WikimediaPage[],
-
-query: VehicleImageQuery,
-
+  query: VehicleImageQuery,
 ): VehicleImage | null {
+  let best: { image: VehicleImage; score: number } | null = null
 
-let best: { image: VehicleImage; score: number } | null = null
+  for (const page of pages) {
+    const candidate = evaluatePage(page, query)
 
-for (const page of pages) {
+    if (candidate && (!best || candidate.score > best.score)) best = candidate
+  }
 
-const candidate = evaluatePage(page, query)
-
-if (candidate && (!best || candidate.score > best.score)) best = candidate
-
+  return best?.image ?? null
 }
-
-return best?.image ?? null
-
-}
-
-
 
 /* -------------------------------------------------------------------------- */
 
@@ -394,82 +279,62 @@ return best?.image ?? null
 
 /* -------------------------------------------------------------------------- */
 
-
-
 export interface WikimediaProviderOptions {
+  fetchImpl?: typeof fetch
 
-fetchImpl?: typeof fetch
+  timeoutMs?: number
 
-timeoutMs?: number
-
-concurrency?: number
-
+  concurrency?: number
 }
-
-
 
 /** Limita requisições simultâneas (a Wikimedia pede uso moderado da API). */
 
 function createLimiter(limit: number) {
+  let active = 0
 
-let active = 0
+  const waiting: Array<() => void> = []
 
-const waiting: Array<() => void> = []
+  return async function run<T>(task: () => Promise<T>): Promise<T> {
+    if (active >= limit) await new Promise<void>((resolve) => waiting.push(resolve))
 
-return async function run<T>(task: () => Promise<T>): Promise<T> {
+    active += 1
 
-if (active >= limit) await new Promise<void>((resolve) => waiting.push(resolve))
+    try {
+      return await task()
+    } finally {
+      active -= 1
 
-active += 1
-
-try {
-
-return await task()
-
-} finally {
-
-active -= 1
-
-waiting.shift()?.()
-
-}
-
-}
-
+      waiting.shift()?.()
+    }
+  }
 }
 export function buildRequestUrl(terms: { brand: string; family: string }): string {
+  const params = new URLSearchParams({
+    action: 'query',
 
-const params = new URLSearchParams({
+    format: 'json',
 
-action: 'query',
+    origin: '*',
 
-format: 'json',
+    generator: 'search',
 
-origin: '*',
+    gsrnamespace: '6',
 
-generator: 'search',
+    gsrlimit: String(IMAGE_CONFIG.searchLimit),
 
-gsrnamespace: '6',
+    gsrsearch: `filetype:bitmap ${terms.brand} ${terms.family}`,
 
-gsrlimit: String(IMAGE_CONFIG.searchLimit),
+    prop: 'imageinfo',
 
-gsrsearch: `filetype:bitmap ${terms.brand} ${terms.family}`,
+    iiprop: 'url|size|mime|extmetadata',
 
-prop: 'imageinfo',
+    iiurlwidth: String(IMAGE_CONFIG.thumbnailWidth),
 
-iiprop: 'url|size|mime|extmetadata',
+    iiextmetadatafilter: 'LicenseShortName|LicenseUrl|Artist|AttributionRequired',
+  })
 
-iiurlwidth: String(IMAGE_CONFIG.thumbnailWidth),
-
-iiextmetadatafilter: 'LicenseShortName|LicenseUrl|Artist|AttributionRequired',
-
-})
-
-return `${IMAGE_CONFIG.apiUrl}?${params.toString()}`
-
+  return `${IMAGE_CONFIG.apiUrl}?${params.toString()}`
 }
-
-
 
 /**
 
@@ -480,93 +345,71 @@ return `${IMAGE_CONFIG.apiUrl}?${params.toString()}`
 */
 
 export function createWikimediaImageProvider(
-
-options: WikimediaProviderOptions = {},
-
+  options: WikimediaProviderOptions = {},
 ): VehicleImageProvider {
+  const fetchImpl = options.fetchImpl ?? ((...args) => fetch(...args))
 
-const fetchImpl = options.fetchImpl ?? ((...args) => fetch(...args))
+  const timeoutMs = options.timeoutMs ?? IMAGE_CONFIG.timeoutMs
 
-const timeoutMs = options.timeoutMs ?? IMAGE_CONFIG.timeoutMs
+  const limit = createLimiter(options.concurrency ?? IMAGE_CONFIG.concurrency)
 
-const limit = createLimiter(options.concurrency ?? IMAGE_CONFIG.concurrency)
+  const cache = new Map<string, Promise<VehicleImage | null>>()
 
-const cache = new Map<string, Promise<VehicleImage | null>>()
+  async function fetchImage(query: VehicleImageQuery): Promise<VehicleImage | null> {
+    const terms = buildSearchTerms(query)
 
+    if (!terms) return null
 
+    const controller = new AbortController()
 
-async function fetchImage(query: VehicleImageQuery): Promise<VehicleImage | null> {
+    const timer = setTimeout(() => controller.abort(), timeoutMs)
 
-const terms = buildSearchTerms(query)
+    try {
+      const response = await fetchImpl(buildRequestUrl(terms), {
+        signal: controller.signal,
 
-if (!terms) return null
+        credentials: 'omit',
 
-const controller = new AbortController()
+        referrerPolicy: 'no-referrer',
 
-const timer = setTimeout(() => controller.abort(), timeoutMs)
+        headers: { Accept: 'application/json' },
+      })
 
-try {
+      if (!response.ok) throw new Error(`HTTP ${response.status}`)
 
-const response = await fetchImpl(buildRequestUrl(terms), {
+      const parsed = responseSchema.safeParse(await response.json())
 
-signal: controller.signal,
+      if (!parsed.success) return null
 
-credentials: 'omit',
+      return pickBestImage(Object.values(parsed.data.query?.pages ?? {}), query)
+    } finally {
+      clearTimeout(timer)
+    }
+  }
 
-referrerPolicy: 'no-referrer',
+  return {
+    id: 'wikimedia-commons',
 
-headers: { Accept: 'application/json' },
+    find(query, signal) {
+      if (signal?.aborted) return Promise.resolve(null)
 
-})
+      const key = cacheKey(query)
 
-if (!response.ok) throw new Error(`HTTP ${response.status}`)
+      const cached = cache.get(key)
 
-const parsed = responseSchema.safeParse(await response.json())
+      if (cached) return cached
 
-if (!parsed.success) return null
+      const pending = limit(() => fetchImage(query)).catch(() => {
+        // Falha de rede/timeout: não guarda em cache para permitir nova tentativa depois.
 
-return pickBestImage(Object.values(parsed.data.query?.pages ?? {}), query)
+        cache.delete(key)
 
-} finally {
+        return null
+      })
 
-clearTimeout(timer)
+      cache.set(key, pending)
 
-}
-
-}
-
-
-
-return {
-
-id: 'wikimedia-commons',
-
-find(query, signal) {
-
-if (signal?.aborted) return Promise.resolve(null)
-
-const key = cacheKey(query)
-
-const cached = cache.get(key)
-
-if (cached) return cached
-
-const pending = limit(() => fetchImage(query)).catch(() => {
-
-// Falha de rede/timeout: não guarda em cache para permitir nova tentativa depois.
-
-cache.delete(key)
-
-return null
-
-})
-
-cache.set(key, pending)
-
-return pending
-
-},
-
-}
-
+      return pending
+    },
+  }
 }

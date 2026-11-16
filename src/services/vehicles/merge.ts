@@ -1,20 +1,12 @@
 import { SUPPLEMENT_UPDATED_AT } from '../../config/vehicleSupplementData'
 
 import type {
-
-FipePriceRecord,
-
-PriceSource,
-
-SupplementRecord,
-
-Vehicle,
-
-VehicleCatalog,
-
+  FipePriceRecord,
+  PriceSource,
+  SupplementRecord,
+  Vehicle,
+  VehicleCatalog,
 } from '../../types/vehicle'
-
-
 
 /**
 
@@ -25,203 +17,167 @@ VehicleCatalog,
 */
 
 export const FIELD_ORIGINS = {
+  preco: 'FIPE (preço de referência)',
 
-preco: 'FIPE (preço de referência)',
+  marca_modelo_ano_combustivel: 'FIPE',
 
-marca_modelo_ano_combustivel: 'FIPE',
+  cambio: 'Base complementar (estimativa demonstrativa)',
 
-cambio: 'Base complementar (estimativa demonstrativa)',
+  consumo: 'Base complementar (estimativa demonstrativa)',
 
-consumo: 'Base complementar (estimativa demonstrativa)',
+  manutencao: 'Base complementar (estimativa demonstrativa)',
 
-manutencao: 'Base complementar (estimativa demonstrativa)',
+  seguro: 'Base complementar (estimativa demonstrativa)',
 
-seguro: 'Base complementar (estimativa demonstrativa)',
+  depreciacao: 'Base complementar (estimativa demonstrativa)',
 
-depreciacao: 'Base complementar (estimativa demonstrativa)',
+  categoria: 'Base complementar (estimativa demonstrativa)',
 
-categoria: 'Base complementar (estimativa demonstrativa)',
+  porta_malas: 'Base complementar (estimativa demonstrativa)',
 
-porta_malas: 'Base complementar (estimativa demonstrativa)',
-
-passageiros: 'Base complementar (estimativa demonstrativa)',
-
+  passageiros: 'Base complementar (estimativa demonstrativa)',
 } as const
 
-
-
 export function vehicleId(fipeCode: string, yearId: string): string {
-
-return `${fipeCode}:${yearId}`
-
+  return `${fipeCode}:${yearId}`
 }
-
-
 
 export function mergeVehicle(
+  supplement: SupplementRecord,
 
-supplement: SupplementRecord,
+  price: FipePriceRecord,
 
-price: FipePriceRecord,
-
-source: PriceSource,
-
+  source: PriceSource,
 ): Vehicle {
+  return {
+    id: vehicleId(supplement.fipeCode, supplement.fipeYearId),
 
-return {
+    fipeCode: price.fipeCode,
 
-id: vehicleId(supplement.fipeCode, supplement.fipeYearId),
+    fipeBrandId: supplement.fipeBrandId,
 
-fipeCode: price.fipeCode,
+    fipeModelId: supplement.fipeModelId,
 
-fipeBrandId: supplement.fipeBrandId,
+    fipeYearId: supplement.fipeYearId,
 
-fipeModelId: supplement.fipeModelId,
+    brand: price.brand,
 
-fipeYearId: supplement.fipeYearId,
+    model: price.model,
 
-brand: price.brand,
+    modelYear: price.modelYear,
 
-model: price.model,
+    fuel: price.fuel,
 
-modelYear: price.modelYear,
+    priceBRL: price.priceBRL,
 
-fuel: price.fuel,
+    priceSource: source,
 
-priceBRL: price.priceBRL,
+    referenceMonth: price.referenceMonth,
 
-priceSource: source,
+    referenceMonthLabel: price.referenceMonthLabel,
 
-referenceMonth: price.referenceMonth,
+    transmission: supplement.transmission,
 
-referenceMonthLabel: price.referenceMonthLabel,
+    urbanConsumption: supplement.urbanConsumption,
 
-transmission: supplement.transmission,
+    highwayConsumption: supplement.highwayConsumption,
 
-urbanConsumption: supplement.urbanConsumption,
+    consumptionUnit: supplement.consumptionUnit,
 
-highwayConsumption: supplement.highwayConsumption,
+    maintenanceAnnualBRL: supplement.maintenanceAnnualBRL,
 
-consumptionUnit: supplement.consumptionUnit,
+    insuranceCategory: supplement.insuranceCategory,
 
-maintenanceAnnualBRL: supplement.maintenanceAnnualBRL,
+    depreciationAnnualPct: supplement.depreciationAnnualPct,
 
-insuranceCategory: supplement.insuranceCategory,
+    category: supplement.category,
 
-depreciationAnnualPct: supplement.depreciationAnnualPct,
+    trunkLiters: supplement.trunkLiters,
 
-category: supplement.category,
+    seats: supplement.seats,
 
-trunkLiters: supplement.trunkLiters,
+    supplementUpdatedAt: SUPPLEMENT_UPDATED_AT,
 
-seats: supplement.seats,
-
-supplementUpdatedAt: SUPPLEMENT_UPDATED_AT,
-
-hasSupplement: true,
-
+    hasSupplement: true,
+  }
 }
-
-}
-
-
 
 /** Mês de referência predominante entre os veículos (desempate pelo mais recente). */
 
 export function dominantReferenceMonth(vehicles: readonly Vehicle[]): {
+  month: string | null
 
-month: string | null
-
-label: string | null
-
+  label: string | null
 } {
+  const counts = new Map<string, { count: number; label: string | null }>()
 
-const counts = new Map<string, { count: number; label: string | null }>()
+  for (const vehicle of vehicles) {
+    if (!vehicle.referenceMonth) continue
 
-for (const vehicle of vehicles) {
+    const entry = counts.get(vehicle.referenceMonth) ?? {
+      count: 0,
 
-if (!vehicle.referenceMonth) continue
+      label: vehicle.referenceMonthLabel,
+    }
 
-const entry = counts.get(vehicle.referenceMonth) ?? {
+    entry.count += 1
 
-count: 0,
+    counts.set(vehicle.referenceMonth, entry)
+  }
 
-label: vehicle.referenceMonthLabel,
+  let best: { month: string; count: number; label: string | null } | null = null
 
+  for (const [month, entry] of counts) {
+    if (!best || entry.count > best.count || (entry.count === best.count && month > best.month)) {
+      best = { month, ...entry }
+    }
+  }
+
+  return best ? { month: best.month, label: best.label } : { month: null, label: null }
 }
-
-entry.count += 1
-
-counts.set(vehicle.referenceMonth, entry)
-
-}
-
-let best: { month: string; count: number; label: string | null } | null = null
-
-for (const [month, entry] of counts) {
-
-if (!best || entry.count > best.count || (entry.count === best.count && month > best.month)) {
-
-best = { month, ...entry }
-
-}
-
-}
-
-return best ? { month: best.month, label: best.label } : { month: null, label: null }
-
-}
-
-
 
 export function buildCatalog(params: {
+  vehicles: Vehicle[]
 
-vehicles: Vehicle[]
+  sourceLabel: string
 
-sourceLabel: string
+  versionTag: string
 
-versionTag: string
+  warnings: string[]
 
-warnings: string[]
+  retryable: boolean
 
-retryable: boolean
-
-now?: Date
-
+  now?: Date
 }): VehicleCatalog {
+  const { vehicles } = params
 
-const { vehicles } = params
+  const reference = dominantReferenceMonth(vehicles)
 
-const reference = dominantReferenceMonth(vehicles)
+  const onlineCount = vehicles.filter((vehicle) => vehicle.priceSource === 'fipe_online').length
 
-const onlineCount = vehicles.filter((vehicle) => vehicle.priceSource === 'fipe_online').length
+  const snapshotCount = vehicles.length - onlineCount
 
-const snapshotCount = vehicles.length - onlineCount
+  return {
+    vehicles,
 
-return {
+    referenceMonth: reference.month,
 
-vehicles,
+    referenceMonthLabel: reference.label,
 
-referenceMonth: reference.month,
+    sourceLabel: params.sourceLabel,
 
-referenceMonthLabel: reference.label,
+    fetchedAt: (params.now ?? new Date()).toISOString(),
 
-sourceLabel: params.sourceLabel,
+    version: `${params.versionTag}|${reference.month ?? 'sem-referencia'}|${SUPPLEMENT_UPDATED_AT}`,
 
-fetchedAt: (params.now ?? new Date()).toISOString(),
+    warnings: params.warnings,
 
-version: `${params.versionTag}|${reference.month ?? 'sem-referencia'}|${SUPPLEMENT_UPDATED_AT}`,
+    onlineCount,
 
-warnings: params.warnings,
+    snapshotCount,
 
-onlineCount,
+    liveStatus: snapshotCount === 0 ? 'online' : onlineCount === 0 ? 'referencia_salva' : 'parcial',
 
-snapshotCount,
-
-liveStatus: snapshotCount === 0 ? 'online' : onlineCount === 0 ? 'referencia_salva' : 'parcial',
-
-retryable: params.retryable,
-
-}
-
+    retryable: params.retryable,
+  }
 }

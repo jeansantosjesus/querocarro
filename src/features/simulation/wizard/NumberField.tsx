@@ -8,106 +8,84 @@ import type { SimulationInput } from '../../../schemas/simulation'
 
 import { optionalNumber, overrideNumber, requiredNumber } from './numeric'
 
-
-
 interface NumberFieldProps {
+  name: FieldPath<SimulationInput>
 
-name: FieldPath<SimulationInput>
+  label: string
 
-label: string
+  hint?: ReactNode
 
-hint?: ReactNode
+  /** Vazio vira `null` (campo opcional do modelo). */
 
-/** Vazio vira `null` (campo opcional do modelo). */
+  optional?: boolean
 
-optional?: boolean
+  /** Vazio vira ausente (ajuste opcional de premissa). */
 
-/** Vazio vira ausente (ajuste opcional de premissa). */
+  override?: boolean
 
-override?: boolean
+  step?: string
 
-step?: string
+  min?: number
 
-min?: number
+  max?: number
 
-max?: number
-
-placeholder?: string
-
+  placeholder?: string
 }
-
-
 
 /** Campo numérico ligado ao formulário do assistente (aceita vírgula decimal). */
 
 export function NumberField({
+  name,
 
-name,
+  label,
 
-label,
+  hint,
 
-hint,
+  optional,
 
-optional,
+  override,
 
-override,
+  step = 'any',
 
-step = 'any',
+  min,
 
-min,
+  max,
 
-max,
-
-placeholder,
-
+  placeholder,
 }: NumberFieldProps) {
+  const {
+    register,
 
-const {
+    formState: { errors },
+  } = useFormContext<SimulationInput>()
 
-register,
+  const message = (get(errors, name) as { message?: string } | undefined)?.message
 
-formState: { errors },
+  const options = override ? overrideNumber : optional ? optionalNumber : requiredNumber
 
-} = useFormContext<SimulationInput>()
+  return (
+    <Field label={label} hint={hint} error={message} required={!optional && !override}>
+      {(props) => (
+        <input
+          {...props}
 
-const message = (get(errors, name) as { message?: string } | undefined)?.message
+          type="number"
 
-const options = override ? overrideNumber : optional ? optionalNumber : requiredNumber
+          inputMode="decimal"
 
+          step={step}
 
+          min={min}
 
-return (
+          max={max}
 
-<Field label={label} hint={hint} error={message} required={!optional && !override}>
+          placeholder={placeholder}
 
-{(props) => (
+          className="qc-input"
 
-<input
-
-{...props}
-
-type="number"
-
-inputMode="decimal"
-
-step={step}
-
-min={min}
-
-max={max}
-
-placeholder={placeholder}
-
-className="qc-input"
-
-{...register(name, options)}
-
-/>
-
-)}
-
-</Field>
-
-)
-
+          {...register(name, options)}
+        />
+      )}
+    </Field>
+  )
 }

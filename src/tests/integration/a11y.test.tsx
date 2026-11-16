@@ -6,21 +6,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { renderApp } from '../fixtures/renderApp'
 
-
-
 vi.setConfig({ testTimeout: 60_000 })
 
-
-
 beforeEach(() => {
+  window.sessionStorage.clear()
 
-window.sessionStorage.clear()
-
-window.localStorage.clear()
-
+  window.localStorage.clear()
 })
-
-
 
 // jsdom não calcula layout/cores: regras dependentes disso são desativadas aqui
 
@@ -28,210 +20,150 @@ window.localStorage.clear()
 
 const AXE_OPTIONS = { rules: { 'color-contrast': { enabled: false }, region: { enabled: false } } }
 
-
-
 async function expectNoViolations(container: HTMLElement) {
+  const results = await axe(container, AXE_OPTIONS)
 
-const results = await axe(container, AXE_OPTIONS)
+  const summary = results.violations.map(
+    (v) => `${v.id}: ${v.nodes.map((n) => n.html).join(' | ')}`,
+  )
 
-const summary = results.violations.map(
-
-(v) => `${v.id}: ${v.nodes.map((n) => n.html).join(' | ')}`,
-
-)
-
-expect(summary).toEqual([])
-
+  expect(summary).toEqual([])
 }
-
-
 
 describe('acessibilidade (axe)', () => {
+  it('página inicial', async () => {
+    const { container } = await renderApp({ route: '/' })
 
-it('página inicial', async () => {
+    await screen.findByRole('heading', { level: 1 })
 
-const { container } = await renderApp({ route: '/' })
+    await expectNoViolations(container)
+  })
 
-await screen.findByRole('heading', { level: 1 })
+  it('login', async () => {
+    const { container } = await renderApp({ route: '/entrar' })
 
-await expectNoViolations(container)
+    await screen.findByRole('heading', { level: 1 })
 
-})
+    await expectNoViolations(container)
+  })
 
+  it('cadastro', async () => {
+    const { container } = await renderApp({ route: '/cadastro' })
 
+    await screen.findByRole('heading', { level: 1 })
 
-it('login', async () => {
+    await expectNoViolations(container)
+  })
 
-const { container } = await renderApp({ route: '/entrar' })
+  it('recuperação de senha', async () => {
+    const { container } = await renderApp({ route: '/recuperar-senha' })
 
-await screen.findByRole('heading', { level: 1 })
+    await screen.findByRole('heading', { level: 1 })
 
-await expectNoViolations(container)
+    await expectNoViolations(container)
+  })
 
-})
+  it('central de ajuda', async () => {
+    const { container } = await renderApp({ route: '/ajuda' })
 
+    await screen.findByRole('heading', { level: 1, name: 'Central de ajuda' })
 
+    await expectNoViolations(container)
+  })
 
-it('cadastro', async () => {
+  it('artigo da central de ajuda (metodologia)', async () => {
+    const { container } = await renderApp({ route: '/ajuda/metodologia' })
 
-const { container } = await renderApp({ route: '/cadastro' })
+    await screen.findByRole('heading', { level: 1, name: 'Metodologia' })
 
-await screen.findByRole('heading', { level: 1 })
+    await expectNoViolations(container)
+  })
 
-await expectNoViolations(container)
+  it('painel (autenticado)', async () => {
+    const { container } = await renderApp({ route: '/painel', signedIn: true })
 
-})
+    await screen.findByRole('heading', { level: 1 })
 
+    await expectNoViolations(container)
+  })
 
+  it('assistente: etapa de objetivo e etapa de pesos', async () => {
+    const app = await renderApp({ route: '/' })
 
-it('recuperação de senha', async () => {
+    await app.user.click(await screen.findByRole('button', { name: /Experimentar a demonstração/ }))
 
-const { container } = await renderApp({ route: '/recuperar-senha' })
+    await app.user.click(await screen.findByRole('button', { name: /Começar com dados fictícios/ }))
 
-await screen.findByRole('heading', { level: 1 })
+    await screen.findByRole('heading', { level: 2, name: 'Objetivo' })
 
-await expectNoViolations(container)
+    await expectNoViolations(app.container)
 
-})
+    for (const title of ['Finanças', 'Uso', 'Preferências', 'Pesos']) {
+      await app.user.click(screen.getByRole('button', { name: 'Continuar' }))
 
+      await screen.findByRole('heading', { level: 2, name: title })
+    }
 
+    await expectNoViolations(app.container)
+  })
 
-it('central de ajuda', async () => {
+  it('resultado e comparador (demo)', async () => {
+    const app = await renderApp({ route: '/' })
 
-const { container } = await renderApp({ route: '/ajuda' })
+    await app.user.click(await screen.findByRole('button', { name: /Experimentar a demonstração/ }))
 
-await screen.findByRole('heading', { level: 1, name: 'Central de ajuda' })
+    await app.user.click(await screen.findByRole('button', { name: /Começar com dados fictícios/ }))
 
-await expectNoViolations(container)
+    await screen.findByRole('heading', { level: 2, name: 'Objetivo' })
 
-})
+    for (const title of ['Finanças', 'Uso', 'Preferências', 'Pesos', 'Revisão']) {
+      await app.user.click(screen.getByRole('button', { name: 'Continuar' }))
 
+      await screen.findByRole('heading', { level: 2, name: title })
+    }
 
+    await app.user.click(screen.getByRole('button', { name: 'Calcular opções' }))
 
-it('artigo da central de ajuda (metodologia)', async () => {
+    await screen.findByRole(
+      'heading',
 
-const { container } = await renderApp({ route: '/ajuda/metodologia' })
+      { level: 2, name: /Grupo de opções compatíveis/ },
 
-await screen.findByRole('heading', { level: 1, name: 'Metodologia' })
+      { timeout: 15_000 },
+    )
 
-await expectNoViolations(container)
+    await expectNoViolations(app.container)
+  })
 
-})
+  it('detalhe do veículo com selos de origem (demo)', async () => {
+    const app = await renderApp({ route: '/' })
 
+    await app.user.click(await screen.findByRole('button', { name: /Experimentar a demonstração/ }))
 
+    await app.user.click(await screen.findByRole('button', { name: /Começar com dados fictícios/ }))
 
-it('painel (autenticado)', async () => {
+    await screen.findByRole('heading', { level: 2, name: 'Objetivo' })
 
-const { container } = await renderApp({ route: '/painel', signedIn: true })
+    for (const title of ['Finanças', 'Uso', 'Preferências', 'Pesos', 'Revisão']) {
+      await app.user.click(screen.getByRole('button', { name: 'Continuar' }))
 
-await screen.findByRole('heading', { level: 1 })
+      await screen.findByRole('heading', { level: 2, name: title })
+    }
 
-await expectNoViolations(container)
+    await app.user.click(screen.getByRole('button', { name: 'Calcular opções' }))
 
-})
+    await screen.findByRole(
+      'heading',
 
+      { level: 2, name: /Grupo de opções compatíveis/ },
 
+      { timeout: 15_000 },
+    )
 
-it('assistente: etapa de objetivo e etapa de pesos', async () => {
+    await app.user.click(screen.getAllByRole('link', { name: /Ver detalhes/ })[0]!)
 
-const app = await renderApp({ route: '/' })
+    await screen.findByRole('heading', { level: 2, name: 'Composição do custo' })
 
-await app.user.click(await screen.findByRole('button', { name: /Experimentar a demonstração/ }))
-
-await app.user.click(await screen.findByRole('button', { name: /Começar com dados fictícios/ }))
-
-await screen.findByRole('heading', { level: 2, name: 'Objetivo' })
-
-await expectNoViolations(app.container)
-
-
-
-for (const title of ['Finanças', 'Uso', 'Preferências', 'Pesos']) {
-
-await app.user.click(screen.getByRole('button', { name: 'Continuar' }))
-
-await screen.findByRole('heading', { level: 2, name: title })
-
-}
-
-await expectNoViolations(app.container)
-
-})
-
-
-
-it('resultado e comparador (demo)', async () => {
-
-const app = await renderApp({ route: '/' })
-
-await app.user.click(await screen.findByRole('button', { name: /Experimentar a demonstração/ }))
-
-await app.user.click(await screen.findByRole('button', { name: /Começar com dados fictícios/ }))
-
-await screen.findByRole('heading', { level: 2, name: 'Objetivo' })
-
-for (const title of ['Finanças', 'Uso', 'Preferências', 'Pesos', 'Revisão']) {
-
-await app.user.click(screen.getByRole('button', { name: 'Continuar' }))
-
-await screen.findByRole('heading', { level: 2, name: title })
-
-}
-
-await app.user.click(screen.getByRole('button', { name: 'Calcular opções' }))
-
-await screen.findByRole(
-
-'heading',
-
-{ level: 2, name: /Grupo de opções compatíveis/ },
-
-{ timeout: 15_000 },
-
-)
-
-await expectNoViolations(app.container)
-
-})
-
-
-
-it('detalhe do veículo com selos de origem (demo)', async () => {
-
-const app = await renderApp({ route: '/' })
-
-await app.user.click(await screen.findByRole('button', { name: /Experimentar a demonstração/ }))
-
-await app.user.click(await screen.findByRole('button', { name: /Começar com dados fictícios/ }))
-
-await screen.findByRole('heading', { level: 2, name: 'Objetivo' })
-
-for (const title of ['Finanças', 'Uso', 'Preferências', 'Pesos', 'Revisão']) {
-
-await app.user.click(screen.getByRole('button', { name: 'Continuar' }))
-
-await screen.findByRole('heading', { level: 2, name: title })
-
-}
-
-await app.user.click(screen.getByRole('button', { name: 'Calcular opções' }))
-
-await screen.findByRole(
-
-'heading',
-
-{ level: 2, name: /Grupo de opções compatíveis/ },
-
-{ timeout: 15_000 },
-
-)
-
-await app.user.click(screen.getAllByRole('link', { name: /Ver detalhes/ })[0]!)
-
-await screen.findByRole('heading', { level: 2, name: 'Composição do custo' })
-
-await expectNoViolations(app.container)
-
-})
-
+    await expectNoViolations(app.container)
+  })
 })

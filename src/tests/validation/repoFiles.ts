@@ -14,40 +14,26 @@
 
 */
 
-
-
 interface FsLike {
-
-readFileSync(path: string, encoding: 'utf8'): string
-
+  readFileSync(path: string, encoding: 'utf8'): string
 }
-
-
 
 interface NodeProcessLike {
+  cwd(): string
 
-cwd(): string
-
-getBuiltinModule?(id: 'node:fs'): FsLike | undefined
-
+  getBuiltinModule?(id: 'node:fs'): FsLike | undefined
 }
-
-
 
 /** Lê um arquivo relativo à raiz do repositório. Os testes rodam a partir da raiz (`npm test`). */
 
 export function readRepoFile(relativePath: string): string {
+  const proc = (globalThis as unknown as { process?: NodeProcessLike }).process
 
-const proc = (globalThis as unknown as { process?: NodeProcessLike }).process
+  const fs = proc?.getBuiltinModule?.('node:fs')
 
-const fs = proc?.getBuiltinModule?.('node:fs')
+  if (!proc || !fs) {
+    throw new Error('Leitura de arquivos indisponível: é preciso Node 22.3 ou superior.')
+  }
 
-if (!proc || !fs) {
-
-throw new Error('Leitura de arquivos indisponível: é preciso Node 22.3 ou superior.')
-
-}
-
-return fs.readFileSync(`${proc.cwd()}/${relativePath}`, 'utf8')
-
+  return fs.readFileSync(`${proc.cwd()}/${relativePath}`, 'utf8')
 }

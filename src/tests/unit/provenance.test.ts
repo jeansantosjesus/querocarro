@@ -14,352 +14,237 @@ import { BRAZILIAN_STATE_CODES } from '../../types/regionalTax'
 
 import { makeVehicle } from '../fixtures/factories'
 
-
-
 const SUPPLEMENT_DATE = '2026-11-06'
 
-
-
 function input(overrides: Partial<DataReportInput> = {}): DataReportInput {
+  const vehicles = [makeVehicle()]
 
-const vehicles = [makeVehicle()]
+  return {
+    catalog: buildCatalog({
+      vehicles,
 
-return {
+      sourceLabel: 'teste',
 
-catalog: buildCatalog({
+      versionTag: 'teste',
 
-vehicles,
+      warnings: [],
 
-sourceLabel: 'teste',
+      retryable: false,
 
-versionTag: 'teste',
+      now: new Date('2026-11-10T12:00:00Z'),
+    }),
 
-warnings: [],
+    rules: [BAHIA_DEMONSTRATION_RULE],
 
-retryable: false,
+    states: BRAZILIAN_STATE_CODES,
 
-now: new Date('2026-11-10T12:00:00Z'),
+    asOf: '2026-11-01',
 
-}),
+    supplementUpdatedAt: SUPPLEMENT_DATE,
 
-rules: [BAHIA_DEMONSTRATION_RULE],
-
-states: BRAZILIAN_STATE_CODES,
-
-asOf: '2026-11-01',
-
-supplementUpdatedAt: SUPPLEMENT_DATE,
-
-...overrides,
-
+    ...overrides,
+  }
 }
-
-}
-
-
 
 function catalogWith(vehicles: ReturnType<typeof makeVehicle>[]) {
+  return buildCatalog({
+    vehicles,
 
-return buildCatalog({
+    sourceLabel: 'teste',
 
-vehicles,
+    versionTag: 'teste',
 
-sourceLabel: 'teste',
+    warnings: [],
 
-versionTag: 'teste',
+    retryable: false,
 
-warnings: [],
-
-retryable: false,
-
-now: new Date('2026-11-10T12:00:00Z'),
-
-})
-
+    now: new Date('2026-11-10T12:00:00Z'),
+  })
 }
-
-
 
 describe('registro de proveniência', () => {
+  it('toda entrada de premissa ou demonstração sem URL declara que não tem fonte externa', () => {
+    for (const [key, entry] of Object.entries(PROVENANCE_ENTRIES)) {
+      if (entry.origin === 'estimated' || entry.origin === 'demonstration') {
+        expect(entry.sourceUrl, key).toBeNull()
+      }
+    }
+  })
 
-it('toda entrada de premissa ou demonstração sem URL declara que não tem fonte externa', () => {
+  it('a FIPE aponta para a API oficial do QC e não afirma consumo ou manutenção', () => {
+    expect(PROVENANCE_ENTRIES.fipe_online.sourceUrl).toBe('https://fipe.parallelum.com.br/api/v2')
 
-for (const [key, entry] of Object.entries(PROVENANCE_ENTRIES)) {
+    expect(PROVENANCE_ENTRIES.fipe_online.notes.join(' ')).toMatch(/não informa consumo/)
+  })
 
-if (entry.origin === 'estimated' || entry.origin === 'demonstration') {
+  it('a base complementar é demonstração, não FIPE nem fonte oficial', () => {
+    expect(PROVENANCE_ENTRIES.base_complementar.origin).toBe('demonstration')
 
-expect(entry.sourceUrl, key).toBeNull()
+    expect(PROVENANCE_ENTRIES.base_complementar.notes.join(' ')).toMatch(/Não vem da FIPE/)
+  })
 
-}
+  it('IPVA sem regra verificada é indisponível, nunca zero', () => {
+    expect(PROVENANCE_ENTRIES.ipva_sem_regra.origin).toBe('unavailable')
 
-}
+    expect(PROVENANCE_ENTRIES.ipva_sem_regra.sourceUrl).toBeNull()
+  })
 
+  it('não há fonte oficial cadastrada: a lista de fontes oficiais está vazia', () => {
+    expect(GOVERNMENT_SOURCE_KEYS).toHaveLength(0)
+  })
+
+  it('depreciação e WSM são marcadas como fonte necessária, sem citação inventada', () => {
+    expect(PROVENANCE_ENTRIES.base_complementar.notes.join(' ')).toMatch(
+      /Depreciação: fonte necessária/,
+    )
+
+    expect(PROVENANCE_ENTRIES.metodo_multicriterio.notes.join(' ')).toMatch(/Fonte necessária/)
+  })
 })
-
-
-
-it('a FIPE aponta para a API oficial do QC e não afirma consumo ou manutenção', () => {
-
-expect(PROVENANCE_ENTRIES.fipe_online.sourceUrl).toBe('https://fipe.parallelum.com.br/api/v2')
-
-expect(PROVENANCE_ENTRIES.fipe_online.notes.join(' ')).toMatch(/não informa consumo/)
-
-})
-
-
-
-it('a base complementar é demonstração, não FIPE nem fonte oficial', () => {
-
-expect(PROVENANCE_ENTRIES.base_complementar.origin).toBe('demonstration')
-
-expect(PROVENANCE_ENTRIES.base_complementar.notes.join(' ')).toMatch(/Não vem da FIPE/)
-
-})
-
-
-
-it('IPVA sem regra verificada é indisponível, nunca zero', () => {
-
-expect(PROVENANCE_ENTRIES.ipva_sem_regra.origin).toBe('unavailable')
-
-expect(PROVENANCE_ENTRIES.ipva_sem_regra.sourceUrl).toBeNull()
-
-})
-
-
-
-it('não há fonte oficial cadastrada: a lista de fontes oficiais está vazia', () => {
-
-expect(GOVERNMENT_SOURCE_KEYS).toHaveLength(0)
-
-})
-
-
-
-it('depreciação e WSM são marcadas como fonte necessária, sem citação inventada', () => {
-
-expect(PROVENANCE_ENTRIES.base_complementar.notes.join(' ')).toMatch(
-
-/Depreciação: fonte necessária/,
-
-)
-
-expect(PROVENANCE_ENTRIES.metodo_multicriterio.notes.join(' ')).toMatch(/Fonte necessária/)
-
-})
-
-})
-
-
 
 describe('relatório técnico de dados', () => {
+  it('conta cobertura por campo: ausente conta como ausente, nunca como zero', () => {
+    const report = buildDataReport(
+      input({
+        catalog: catalogWith([
+          makeVehicle({ urbanConsumption: null, maintenanceAnnualBRL: null }),
 
-it('conta cobertura por campo: ausente conta como ausente, nunca como zero', () => {
+          makeVehicle({ urbanConsumption: 12, maintenanceAnnualBRL: 1800 }),
+        ]),
+      }),
+    )
 
-const report = buildDataReport(
+    const urban = report.coverageByField.find((item) => item.field === 'urbanConsumption')
 
-input({
+    expect(urban).toEqual({ field: 'urbanConsumption', available: 1, missing: 1, total: 2 })
 
-catalog: catalogWith([
+    const maintenance = report.coverageByField.find((item) => item.field === 'maintenanceAnnualBRL')
 
-makeVehicle({ urbanConsumption: null, maintenanceAnnualBRL: null }),
+    expect(maintenance?.missing).toBe(1)
+  })
 
-makeVehicle({ urbanConsumption: 12, maintenanceAnnualBRL: 1800 }),
+  it('separa veículos com e sem base complementar', () => {
+    const report = buildDataReport(
+      input({
+        catalog: catalogWith([
+          makeVehicle({ hasSupplement: true }),
 
-]),
+          makeVehicle({ hasSupplement: false }),
+        ]),
+      }),
+    )
 
-}),
+    expect(report.vehiclesWithSupplement).toBe(1)
 
-)
+    expect(report.vehiclesWithoutSupplement).toBe(1)
+  })
 
-const urban = report.coverageByField.find((item) => item.field === 'urbanConsumption')
+  it('detecta registros inválidos com o motivo', () => {
+    const bad = makeVehicle({ priceBRL: 0 })
 
-expect(urban).toEqual({ field: 'urbanConsumption', available: 1, missing: 1, total: 2 })
+    const badYear = makeVehicle({ modelYear: 2099 })
 
-const maintenance = report.coverageByField.find((item) => item.field === 'maintenanceAnnualBRL')
+    const badMonth = makeVehicle({ referenceMonth: '2026/11' })
 
-expect(maintenance?.missing).toBe(1)
+    const badId = makeVehicle({ id: 'fora-do-padrao' })
 
-})
+    const report = buildDataReport(input({ catalog: catalogWith([bad, badYear, badMonth, badId]) }))
 
+    const reasonsOf = (id: string) =>
+      report.invalidRecords.find((item) => item.id === id)?.reasons ?? []
 
+    expect(reasonsOf(bad.id)).toContain('preco_invalido')
 
-it('separa veículos com e sem base complementar', () => {
+    expect(reasonsOf(badYear.id)).toContain('ano_invalido')
 
-const report = buildDataReport(
+    expect(reasonsOf(badMonth.id)).toContain('mes_invalido')
 
-input({
+    expect(reasonsOf('fora-do-padrao')).toContain('id_inconsistente')
+  })
 
-catalog: catalogWith([
+  it('marca a segunda ocorrência de um id como duplicada', () => {
+    const first = makeVehicle({ fipeCode: 'DUP-1', fipeYearId: '2020-1' })
 
-makeVehicle({ hasSupplement: true }),
+    const second = { ...makeVehicle({ fipeCode: 'DUP-1', fipeYearId: '2020-1' }) }
 
-makeVehicle({ hasSupplement: false }),
+    const report = buildDataReport(input({ catalog: catalogWith([first, second]) }))
 
-]),
+    expect(report.invalidRecords).toEqual([{ id: first.id, reasons: ['id_duplicado'] }])
+  })
 
-}),
+  it('preço ausente não é registro inválido: entra na cobertura como ausente', () => {
+    const report = buildDataReport(
+      input({ catalog: catalogWith([makeVehicle({ priceBRL: null })]) }),
+    )
 
-)
+    expect(report.invalidRecords).toHaveLength(0)
 
-expect(report.vehiclesWithSupplement).toBe(1)
+    expect(report.coverageByField.find((item) => item.field === 'priceBRL')?.missing).toBe(1)
+  })
 
-expect(report.vehiclesWithoutSupplement).toBe(1)
+  it('UF com regra de demonstração não conta como verificada; UF sem regra fica sem regra', () => {
+    const report = buildDataReport(input())
 
-})
+    const ba = report.stateCoverage.find((item) => item.state === 'BA')
 
+    const sp = report.stateCoverage.find((item) => item.state === 'SP')
 
+    expect(ba?.status).toBe('demonstracao')
 
-it('detecta registros inválidos com o motivo', () => {
+    expect(sp?.status).toBe('sem_regra')
 
-const bad = makeVehicle({ priceBRL: 0 })
+    expect(report.statesWithoutVerifiedRule).toEqual(expect.arrayContaining(['BA', 'SP']))
 
-const badYear = makeVehicle({ modelYear: 2099 })
+    expect(report.statesWithoutVerifiedRule).toHaveLength(27)
+  })
 
-const badMonth = makeVehicle({ referenceMonth: '2026/11' })
+  it('regra vencida na data de referência aparece como vencida e UF pendente', () => {
+    const report = buildDataReport(input({ asOf: '2027-02-01' }))
 
-const badId = makeVehicle({ id: 'fora-do-padrao' })
+    expect(report.expiredRules.map((rule) => rule.id)).toContain(BAHIA_DEMONSTRATION_RULE.id)
 
-const report = buildDataReport(input({ catalog: catalogWith([bad, badYear, badMonth, badId]) }))
+    expect(report.stateCoverage.find((item) => item.state === 'BA')?.status).toBe(
+      'pendente_ou_vencida',
+    )
+  })
 
-const reasonsOf = (id: string) =>
+  it('regra pendente aparece na lista de pendências', () => {
+    const pending: RegionalTaxRule = {
+      ...BAHIA_DEMONSTRATION_RULE,
 
-report.invalidRecords.find((item) => item.id === id)?.reasons ?? []
+      id: 'mg-pendente',
 
-expect(reasonsOf(bad.id)).toContain('preco_invalido')
+      state: 'MG',
 
-expect(reasonsOf(badYear.id)).toContain('ano_invalido')
+      status: 'pendente',
+    }
 
-expect(reasonsOf(badMonth.id)).toContain('mes_invalido')
+    const report = buildDataReport(input({ rules: [pending] }))
 
-expect(reasonsOf('fora-do-padrao')).toContain('id_inconsistente')
+    expect(report.pendingRules).toEqual([{ id: 'mg-pendente', state: 'MG' }])
+  })
 
-})
+  it('regras sem data de verificação são listadas', () => {
+    const report = buildDataReport(input())
 
+    expect(report.rulesWithoutVerification).toEqual([BAHIA_DEMONSTRATION_RULE.id])
+  })
 
+  it('lista as chaves de valores sem fonte externa, incluindo premissas e base complementar', () => {
+    const keys = buildDataReport(input()).valuesWithoutExternalSource
 
-it('marca a segunda ocorrência de um id como duplicada', () => {
+    expect(keys).toEqual(
+      expect.arrayContaining(['premissas_custo', 'base_complementar', 'ipva_demonstracao_ba']),
+    )
 
-const first = makeVehicle({ fipeCode: 'DUP-1', fipeYearId: '2020-1' })
+    expect(keys).not.toContain('fipe_online')
+  })
 
-const second = { ...makeVehicle({ fipeCode: 'DUP-1', fipeYearId: '2020-1' }) }
+  it('é determinístico: a mesma entrada produz o mesmo relatório', () => {
+    const first = buildDataReport(input())
 
-const report = buildDataReport(input({ catalog: catalogWith([first, second]) }))
+    const second = buildDataReport(input())
 
-expect(report.invalidRecords).toEqual([{ id: first.id, reasons: ['id_duplicado'] }])
-
-})
-
-
-
-it('preço ausente não é registro inválido: entra na cobertura como ausente', () => {
-
-const report = buildDataReport(
-
-input({ catalog: catalogWith([makeVehicle({ priceBRL: null })]) }),
-
-)
-
-expect(report.invalidRecords).toHaveLength(0)
-
-expect(report.coverageByField.find((item) => item.field === 'priceBRL')?.missing).toBe(1)
-
-})
-
-
-
-it('UF com regra de demonstração não conta como verificada; UF sem regra fica sem regra', () => {
-
-const report = buildDataReport(input())
-
-const ba = report.stateCoverage.find((item) => item.state === 'BA')
-
-const sp = report.stateCoverage.find((item) => item.state === 'SP')
-
-expect(ba?.status).toBe('demonstracao')
-
-expect(sp?.status).toBe('sem_regra')
-
-expect(report.statesWithoutVerifiedRule).toEqual(expect.arrayContaining(['BA', 'SP']))
-
-expect(report.statesWithoutVerifiedRule).toHaveLength(27)
-
-})
-
-
-
-it('regra vencida na data de referência aparece como vencida e UF pendente', () => {
-
-const report = buildDataReport(input({ asOf: '2027-02-01' }))
-
-expect(report.expiredRules.map((rule) => rule.id)).toContain(BAHIA_DEMONSTRATION_RULE.id)
-
-expect(report.stateCoverage.find((item) => item.state === 'BA')?.status).toBe(
-
-'pendente_ou_vencida',
-
-)
-
-})
-
-
-
-it('regra pendente aparece na lista de pendências', () => {
-
-const pending: RegionalTaxRule = {
-
-...BAHIA_DEMONSTRATION_RULE,
-
-id: 'mg-pendente',
-
-state: 'MG',
-
-status: 'pendente',
-
-}
-
-const report = buildDataReport(input({ rules: [pending] }))
-
-expect(report.pendingRules).toEqual([{ id: 'mg-pendente', state: 'MG' }])
-
-})
-
-
-
-it('regras sem data de verificação são listadas', () => {
-
-const report = buildDataReport(input())
-
-expect(report.rulesWithoutVerification).toEqual([BAHIA_DEMONSTRATION_RULE.id])
-
-})
-
-
-
-it('lista as chaves de valores sem fonte externa, incluindo premissas e base complementar', () => {
-
-const keys = buildDataReport(input()).valuesWithoutExternalSource
-
-expect(keys).toEqual(
-
-expect.arrayContaining(['premissas_custo', 'base_complementar', 'ipva_demonstracao_ba']),
-
-)
-
-expect(keys).not.toContain('fipe_online')
-
-})
-
-
-
-it('é determinístico: a mesma entrada produz o mesmo relatório', () => {
-
-const first = buildDataReport(input())
-
-const second = buildDataReport(input())
-
-expect(second).toEqual(first)
-
-})
-
+    expect(second).toEqual(first)
+  })
 })

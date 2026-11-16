@@ -1,195 +1,158 @@
 import type { TcoHorizon } from '../config/tco'
 
-
-
 export type AmortizationSystem = 'price' | 'sac'
 
-
-
 export type ExtraCostId =
-
-'documentation' | 'transfer' | 'parking' | 'cleaning' | 'tolls' | 'options'
-
-
+  'documentation' | 'transfer' | 'parking' | 'cleaning' | 'tolls' | 'options'
 
 export interface ExtraCostInput {
+  /** Valor em BRL. Pode ser único (ex.: documentação) ou mensal (ex.: estacionamento). */
 
-/** Valor em BRL. Pode ser único (ex.: documentação) ou mensal (ex.: estacionamento). */
+  amount: number
 
-amount: number
-
-periodicity: 'unico' | 'mensal'
-
+  periodicity: 'unico' | 'mensal'
 }
-
-
 
 /** Itens sem fonte na base. Ausente (null) não entra no total e aparece como "não incluído". */
 
 export type ExtraCosts = Partial<Record<ExtraCostId, ExtraCostInput | null>>
 
-
-
 export interface ScheduleRow {
+  period: number
 
-period: number
+  opening: number
 
-opening: number
+  interest: number
 
-interest: number
+  amortization: number
 
-amortization: number
+  installment: number
 
-installment: number
-
-closing: number
-
+  closing: number
 }
-
-
 
 export interface TcoInput {
+  priceBRL: number
 
-priceBRL: number
+  purchaseMode: 'avista' | 'financiado'
 
-purchaseMode: 'avista' | 'financiado'
+  downPayment: number
 
-downPayment: number
+  monthlyRatePct: number
 
-monthlyRatePct: number
+  installments: number
 
-installments: number
+  ipvaAnnual: number | null
 
-ipvaAnnual: number | null
+  licensingAnnual: number
 
-licensingAnnual: number
+  insuranceAnnual: number | null
 
-insuranceAnnual: number | null
+  /** Manutenção anual já ajustada à idade inicial do veículo. */
 
-/** Manutenção anual já ajustada à idade inicial do veículo. */
+  maintenanceAnnualAtStart: number | null
 
-maintenanceAnnualAtStart: number | null
+  ageAtStart: number
 
-ageAtStart: number
+  /** Custo de energia por km, já com margem do cenário. */
 
-/** Custo de energia por km, já com margem do cenário. */
+  energyCostPerKm: number | null
 
-energyCostPerKm: number | null
+  monthlyKm: number
 
-monthlyKm: number
+  depreciationAnnualPct: number | null
 
-depreciationAnnualPct: number | null
+  extras: ExtraCosts
 
-extras: ExtraCosts
+  assumptions: {
+    maintenanceAgeFreeYears: number
 
-assumptions: {
-
-maintenanceAgeFreeYears: number
-
-maintenanceAgeIncreasePctPerYear: number
-
+    maintenanceAgeIncreasePctPerYear: number
+  }
 }
-
-}
-
-
 
 export interface TcoEconomicBreakdown {
+  total: number | null
 
-total: number | null
+  acquisition: number
 
-acquisition: number
+  /** Valor residual estimado no horizonte (subtraído). */
 
-/** Valor residual estimado no horizonte (subtraído). */
+  residual: number | null
 
-residual: number | null
+  interest: number
 
-interest: number
+  taxes: number | null
 
-taxes: number | null
+  insurance: number | null
 
-insurance: number | null
+  energy: number | null
 
-energy: number | null
+  maintenance: number | null
 
-maintenance: number | null
-
-extras: number
-
+  extras: number
 }
-
-
 
 export interface TcoCashBreakdown {
+  total: number | null
 
-total: number | null
+  entry: number
 
-entry: number
+  installments: number
 
-installments: number
+  taxes: number | null
 
-taxes: number | null
+  insurance: number | null
 
-insurance: number | null
+  energy: number | null
 
-energy: number | null
+  maintenance: number | null
 
-maintenance: number | null
+  extras: number
 
-extras: number
+  /** Residual estimado menos saldo devedor no horizonte: posição líquida se o veículo fosse vendido. */
 
-/** Residual estimado menos saldo devedor no horizonte: posição líquida se o veículo fosse vendido. */
-
-netResidualPosition: number | null
-
+  netResidualPosition: number | null
 }
-
-
 
 export interface TcoResult {
+  horizonMonths: TcoHorizon
 
-horizonMonths: TcoHorizon
+  system: AmortizationSystem
 
-system: AmortizationSystem
+  /** Custo econômico: não inclui o principal separadamente (já está no preço). */
 
-/** Custo econômico: não inclui o principal separadamente (já está no preço). */
+  economic: TcoEconomicBreakdown
 
-economic: TcoEconomicBreakdown
+  /** Fluxo de caixa: desembolsos reais no horizonte. */
 
-/** Fluxo de caixa: desembolsos reais no horizonte. */
+  cash: TcoCashBreakdown
 
-cash: TcoCashBreakdown
+  interestPaid: number
 
-interestPaid: number
+  balanceAtHorizon: number
 
-balanceAtHorizon: number
+  residualCapped: boolean
 
-residualCapped: boolean
+  /** Componentes obrigatórios ausentes. Se houver, os totais são null. */
 
-/** Componentes obrigatórios ausentes. Se houver, os totais são null. */
+  missing: string[]
 
-missing: string[]
+  /** Itens opcionais não informados. Não entram no total. */
 
-/** Itens opcionais não informados. Não entram no total. */
-
-notIncluded: string[]
-
+  notIncluded: string[]
 }
-
-
 
 /** TCO de um veículo em todas as combinações de horizonte e sistema de amortização. */
 
 export interface VehicleTco {
+  /** Horizonte usado pelo critério no ranking. */
 
-/** Horizonte usado pelo critério no ranking. */
+  criterionHorizonMonths: TcoHorizon
 
-criterionHorizonMonths: TcoHorizon
+  /** Custo econômico (Price) no horizonte do critério. null se algum componente faltar. */
 
-/** Custo econômico (Price) no horizonte do critério. null se algum componente faltar. */
+  criterionValue: number | null
 
-criterionValue: number | null
-
-byHorizon: Record<TcoHorizon, { price: TcoResult; sac: TcoResult }>
-
+  byHorizon: Record<TcoHorizon, { price: TcoResult; sac: TcoResult }>
 }

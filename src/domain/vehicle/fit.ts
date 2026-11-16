@@ -8,17 +8,11 @@ import { clamp } from '../../utils/stats'
 
 import { brandMatches, isRecentVehicle } from './filters'
 
-
-
 function average(values: number[]): number | null {
+  if (values.length === 0) return null
 
-if (values.length === 0) return null
-
-return values.reduce((sum, value) => sum + value, 0) / values.length
-
+  return values.reduce((sum, value) => sum + value, 0) / values.length
 }
-
-
 
 /**
 
@@ -31,44 +25,30 @@ return values.reduce((sum, value) => sum + value, 0) / values.length
 */
 
 export function calculateUsageFit(
+  vehicle: Vehicle,
 
-vehicle: Vehicle,
-
-usage: SimulationInput['usage'],
-
+  usage: SimulationInput['usage'],
 ): number | null {
+  const parts: number[] = []
 
-const parts: number[] = []
+  if (vehicle.seats !== null) {
+    const extra = Math.max(vehicle.seats - usage.passengers, 0)
 
+    parts.push(clamp(SEATS_FIT.base + SEATS_FIT.perExtraSeat * extra, 0, 100))
+  }
 
+  if (vehicle.trunkLiters !== null) {
+    const required = TRUNK_REQUIRED_LITERS[usage.trunkNeed]
 
-if (vehicle.seats !== null) {
+    parts.push(clamp((vehicle.trunkLiters / required) * 100, 0, 100))
+  }
 
-const extra = Math.max(vehicle.seats - usage.passengers, 0)
+  if (vehicle.category !== null) {
+    parts.push(USAGE_CATEGORY_FIT[usage.type][vehicle.category])
+  }
 
-parts.push(clamp(SEATS_FIT.base + SEATS_FIT.perExtraSeat * extra, 0, 100))
-
+  return average(parts)
 }
-
-if (vehicle.trunkLiters !== null) {
-
-const required = TRUNK_REQUIRED_LITERS[usage.trunkNeed]
-
-parts.push(clamp((vehicle.trunkLiters / required) * 100, 0, 100))
-
-}
-
-if (vehicle.category !== null) {
-
-parts.push(USAGE_CATEGORY_FIT[usage.type][vehicle.category])
-
-}
-
-return average(parts)
-
-}
-
-
 
 /**
 
@@ -81,55 +61,38 @@ return average(parts)
 */
 
 export function calculatePreferenceScore(
+  vehicle: Vehicle,
 
-vehicle: Vehicle,
+  input: Pick<SimulationInput, 'objective' | 'preferences'>,
 
-input: Pick<SimulationInput, 'objective' | 'preferences'>,
-
-referenceYear: number,
-
+  referenceYear: number,
 ): number | null {
+  const { preferences, objective } = input
 
-const { preferences, objective } = input
+  const parts: number[] = []
 
-const parts: number[] = []
+  if (preferences.wantedBrands.length > 0) {
+    parts.push(brandMatches(vehicle.brand, preferences.wantedBrands) ? 100 : 0)
+  }
 
+  if (preferences.fuel !== 'indiferente' && vehicle.fuel !== null) {
+    const matches =
+      vehicle.fuel === preferences.fuel ||
+      (vehicle.fuel === 'flex' &&
+        (preferences.fuel === 'gasolina' || preferences.fuel === 'etanol'))
 
+    parts.push(matches ? 100 : 0)
+  }
 
-if (preferences.wantedBrands.length > 0) {
+  if (preferences.transmission !== 'indiferente' && vehicle.transmission !== null) {
+    parts.push(vehicle.transmission === preferences.transmission ? 100 : 0)
+  }
 
-parts.push(brandMatches(vehicle.brand, preferences.wantedBrands) ? 100 : 0)
+  if (objective.condition !== 'indiferente') {
+    const recent = isRecentVehicle(vehicle, referenceYear)
 
-}
+    parts.push((objective.condition === 'novo') === recent ? 100 : 0)
+  }
 
-if (preferences.fuel !== 'indiferente' && vehicle.fuel !== null) {
-
-const matches =
-
-vehicle.fuel === preferences.fuel ||
-
-(vehicle.fuel === 'flex' &&
-
-(preferences.fuel === 'gasolina' || preferences.fuel === 'etanol'))
-
-parts.push(matches ? 100 : 0)
-
-}
-
-if (preferences.transmission !== 'indiferente' && vehicle.transmission !== null) {
-
-parts.push(vehicle.transmission === preferences.transmission ? 100 : 0)
-
-}
-
-if (objective.condition !== 'indiferente') {
-
-const recent = isRecentVehicle(vehicle, referenceYear)
-
-parts.push((objective.condition === 'novo') === recent ? 100 : 0)
-
-}
-
-return average(parts)
-
+  return average(parts)
 }

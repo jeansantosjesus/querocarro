@@ -1,14 +1,8 @@
 # Backlog
 
-
-
 Preenchido pela auditoria inicial (10/11/2026). Status inicial: pendente.
 
-
-
 ## QC-001 — Auditoria do estado atual
-
-
 
 - **Descrição:** Mapear o que já existe, sem mudar código de cálculo ou de tela.
 
@@ -26,11 +20,7 @@ Preenchido pela auditoria inicial (10/11/2026). Status inicial: pendente.
 
 - **Status:** concluído
 
-
-
 ## QC-002 — Fundamentação do SAD
-
-
 
 - **Descrição:** Registrar o que o sistema decide, o que não decide e como a renda pode influenciar filtros sem virar critério de “carro mais caro”.
 
@@ -48,11 +38,7 @@ Preenchido pela auditoria inicial (10/11/2026). Status inicial: pendente.
 
 - **Status:** pendente
 
-
-
 ## QC-003 — TCO e financiamento
-
-
 
 - **Descrição:** Completar a identificação de cada componente do custo total e do que a Tabela Price não inclui.
 
@@ -70,11 +56,7 @@ Preenchido pela auditoria inicial (10/11/2026). Status inicial: pendente.
 
 - **Status:** pendente
 
-
-
 ## QC-004 — Capacidade financeira
-
-
 
 - **Descrição:** Deixar explícitos o limite voluntário, a margem da renda e o teto de comprometimento, e o efeito da renda no conjunto elegível.
 
@@ -92,11 +74,7 @@ Preenchido pela auditoria inicial (10/11/2026). Status inicial: pendente.
 
 - **Status:** pendente
 
-
-
 ## QC-005 — Regionalização tributária
-
-
 
 - **Descrição:** IPVA e licenciamento por UF e exercício, somente com fonte oficial. Sem fonte, manter estimativa configurável e o aviso.
 
@@ -114,11 +92,7 @@ Preenchido pela auditoria inicial (10/11/2026). Status inicial: pendente.
 
 - **Status:** pendente
 
-
-
 ## QC-006 — Modelo analítico
-
-
 
 - **Descrição:** Revisar pesos, normalização e o grupo recomendado depois das regras de capacidade e tributos.
 
@@ -136,11 +110,7 @@ Preenchido pela auditoria inicial (10/11/2026). Status inicial: pendente.
 
 - **Status:** pendente
 
-
-
 ## QC-007 — Simulação inversa
-
-
 
 - **Descrição:** A partir de um veículo, mostrar combinações de entrada, prazo e parcela e o TCO correspondente, sem aprovar crédito.
 
@@ -158,11 +128,7 @@ Preenchido pela auditoria inicial (10/11/2026). Status inicial: pendente.
 
 - **Status:** pendente
 
-
-
 ## QC-008 — Central de ajuda
-
-
 
 - **Descrição:** Ajuda navegável sobre FIPE, TCO, financiamento, capacidade, pesos e limites, sem duplicar números mágicos fora da config.
 
@@ -180,11 +146,7 @@ Preenchido pela auditoria inicial (10/11/2026). Status inicial: pendente.
 
 - **Status:** pendente
 
-
-
 ## QC-009 — Dados e fontes
-
-
 
 - **Descrição:** Inventariar o que é FIPE, o que é base demonstrativa e o que é premissa editável.
 
@@ -202,11 +164,7 @@ Preenchido pela auditoria inicial (10/11/2026). Status inicial: pendente.
 
 - **Status:** pendente
 
-
-
 ## QC-010 — Testes e validação
-
-
 
 - **Descrição:** Cobrir capacidade financeira, regionalização (quando existir), simulação inversa e ajuda.
 
@@ -224,11 +182,7 @@ Preenchido pela auditoria inicial (10/11/2026). Status inicial: pendente.
 
 - **Status:** pendente
 
-
-
 ## QC-011 — Revisão final
-
-
 
 - **Descrição:** Conferir regras invioláveis, privacidade, RLS e o deploy antes de encerrar a árvore.
 

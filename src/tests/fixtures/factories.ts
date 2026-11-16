@@ -8,242 +8,202 @@ import type { DeepPartial } from '../../types/utils'
 
 import type { Vehicle } from '../../types/vehicle'
 
-
-
 export const REFERENCE_YEAR = 2026
-
-
 
 /** Entrada base realista (renda média-alta, financiamento 48x). */
 
 export function makeInput(overrides: DeepPartial<SimulationInput> = {}): SimulationInput {
+  const priorities = { economia: 3, conforto: 3, desempenho: 3, manutencao: 3 }
 
-const priorities = { economia: 3, conforto: 3, desempenho: 3, manutencao: 3 }
+  const base: SimulationInput = {
+    objective: {
+      title: 'Simulação de teste',
 
-const base: SimulationInput = {
+      scenarioId: 'equilibrado',
 
-objective: {
+      customMarginMultiplier: 1,
 
-title: 'Simulação de teste',
+      purchaseMode: 'financiado',
 
-scenarioId: 'equilibrado',
+      condition: 'indiferente',
 
-customMarginMultiplier: 1,
+      maxPurchasePrice: null,
+    },
 
-purchaseMode: 'financiado',
+    finance: {
+      netIncome: 12000,
 
-condition: 'indiferente',
+      fixedExpenses: 4000,
 
-maxPurchasePrice: null,
+      otherRecurringExpenses: 0,
 
-},
+      otherDebts: 0,
 
-finance: {
+      monthlyReserve: 0,
 
-netIncome: 12000,
+      downPayment: 30000,
 
-fixedExpenses: 4000,
+      reserve: 10000,
 
-otherRecurringExpenses: 0,
+      accumulatedReserve: 40000,
 
-otherDebts: 0,
+      reserveMonths: 0,
 
-monthlyReserve: 0,
+      safetyMarginMonthly: 0,
 
-downPayment: 30000,
+      limitMode: 'informado',
 
-reserve: 10000,
+      vehicleSharePct: null,
 
-accumulatedReserve: 40000,
+      useFullDownPayment: false,
 
-reserveMonths: 0,
+      maxMonthlyVehicleSpend: 3500,
 
-safetyMarginMonthly: 0,
+      installments: 48,
 
-limitMode: 'informado',
+      monthlyRatePct: 1.5,
 
-vehicleSharePct: null,
+      maxInstallment: 2200,
+    },
 
-useFullDownPayment: false,
+    usage: {
+      type: 'misto',
 
-maxMonthlyVehicleSpend: 3500,
+      kmPerDay: 30,
 
-installments: 48,
+      daysPerWeek: 5,
 
-monthlyRatePct: 1.5,
+      monthlyKmOverride: null,
 
-maxInstallment: 2200,
+      passengers: 4,
 
-},
+      trunkNeed: 'media',
+    },
 
-usage: {
+    preferences: {
+      fuel: 'indiferente',
 
-type: 'misto',
+      transmission: 'indiferente',
 
-kmPerDay: 30,
+      requireFuel: false,
 
-daysPerWeek: 5,
+      requireTransmission: false,
 
-monthlyKmOverride: null,
+      requireCondition: false,
 
-passengers: 4,
+      yearMin: null,
 
-trunkNeed: 'media',
+      yearMax: null,
 
-},
+      wantedBrands: [],
 
-preferences: {
+      avoidedBrands: [],
 
-fuel: 'indiferente',
+      priorities,
+    },
 
-transmission: 'indiferente',
+    weights: initialWeights('equilibrado', priorities),
 
-requireFuel: false,
+    assumptionOverrides: {},
 
-requireTransmission: false,
+    registrationState: 'BA',
 
-requireCondition: false,
+    allowDemonstrativeTax: false,
 
-yearMin: null,
+    useLiveFipe: false,
+  }
 
-yearMax: null,
-
-wantedBrands: [],
-
-avoidedBrands: [],
-
-priorities,
-
-},
-
-weights: initialWeights('equilibrado', priorities),
-
-assumptionOverrides: {},
-
-registrationState: 'BA',
-
-allowDemonstrativeTax: false,
-
-useLiveFipe: false,
-
+  return deepMerge(base, overrides)
 }
-
-return deepMerge(base, overrides)
-
-}
-
-
 
 export type { DeepPartial }
 
-
-
 function isPlainObject(value: unknown): value is Record<string, unknown> {
-
-return typeof value === 'object' && value !== null && !Array.isArray(value)
-
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
-
-
 
 function deepMerge<T>(base: T, patch: DeepPartial<T>): T {
+  if (!isPlainObject(base) || !isPlainObject(patch)) return (patch ?? base) as T
 
-if (!isPlainObject(base) || !isPlainObject(patch)) return (patch ?? base) as T
+  const result: Record<string, unknown> = { ...base }
 
-const result: Record<string, unknown> = { ...base }
+  for (const [key, value] of Object.entries(patch)) {
+    const current = result[key]
 
-for (const [key, value] of Object.entries(patch)) {
+    result[key] = isPlainObject(current) && isPlainObject(value) ? deepMerge(current, value) : value
+  }
 
-const current = result[key]
-
-result[key] = isPlainObject(current) && isPlainObject(value) ? deepMerge(current, value) : value
-
+  return result as T
 }
-
-return result as T
-
-}
-
-
 
 let counter = 0
-
-
 
 /** Veículo sintético completo e válido. */
 
 export function makeVehicle(overrides: Partial<Vehicle> = {}): Vehicle {
+  counter += 1
 
-counter += 1
+  const fipeCode = overrides.fipeCode ?? `TEST-${String(counter).padStart(4, '0')}`
 
-const fipeCode = overrides.fipeCode ?? `TEST-${String(counter).padStart(4, '0')}`
+  const yearId = overrides.fipeYearId ?? '2023-5'
 
-const yearId = overrides.fipeYearId ?? '2023-5'
+  return {
+    id: `${fipeCode}:${yearId}`,
 
-return {
+    fipeCode,
 
-id: `${fipeCode}:${yearId}`,
+    fipeBrandId: '1',
 
-fipeCode,
+    fipeModelId: '1',
 
-fipeBrandId: '1',
+    fipeYearId: yearId,
 
-fipeModelId: '1',
+    brand: 'Marca',
 
-fipeYearId: yearId,
+    model: `Modelo ${counter}`,
 
-brand: 'Marca',
+    modelYear: 2023,
 
-model: `Modelo ${counter}`,
+    fuel: 'flex',
 
-modelYear: 2023,
+    priceBRL: 70000,
 
-fuel: 'flex',
+    priceSource: 'fipe_referencia_salva',
 
-priceBRL: 70000,
+    referenceMonth: '2026-11',
 
-priceSource: 'fipe_referencia_salva',
+    referenceMonthLabel: 'novembro de 2026',
 
-referenceMonth: '2026-11',
+    transmission: 'manual',
 
-referenceMonthLabel: 'novembro de 2026',
+    urbanConsumption: 12,
 
-transmission: 'manual',
+    highwayConsumption: 14,
 
-urbanConsumption: 12,
+    consumptionUnit: 'km/l',
 
-highwayConsumption: 14,
+    maintenanceAnnualBRL: 1800,
 
-consumptionUnit: 'km/l',
+    insuranceCategory: 'medio',
 
-maintenanceAnnualBRL: 1800,
+    depreciationAnnualPct: 8,
 
-insuranceCategory: 'medio',
+    category: 'hatch',
 
-depreciationAnnualPct: 8,
+    trunkLiters: 300,
 
-category: 'hatch',
+    seats: 5,
 
-trunkLiters: 300,
+    supplementUpdatedAt: '2026-11-06',
 
-seats: 5,
+    hasSupplement: true,
 
-supplementUpdatedAt: '2026-11-06',
-
-hasSupplement: true,
-
-...overrides,
-
+    ...overrides,
+  }
 }
-
-}
-
-
 
 /** Catálogo completo da base demonstrativa (respostas FIPE salvas). */
 
 export function loadCatalogVehicles(): Vehicle[] {
-
-return buildVehiclesFromSnapshot()
-
+  return buildVehiclesFromSnapshot()
 }

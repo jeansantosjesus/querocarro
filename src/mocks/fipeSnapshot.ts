@@ -24,1173 +24,1021 @@
 
 export const FIPE_SNAPSHOT_CAPTURED_AT = '2026-11-06'
 
-
-
 export interface FipeSnapshotEntry {
+  brandId: string
 
-brandId: string
+  modelId: string
 
-modelId: string
+  yearId: string
 
-yearId: string
-
-response: unknown
-
+  response: unknown
 }
 
-
-
 export const FIPE_SNAPSHOT: readonly FipeSnapshotEntry[] = [
+  {
+    brandId: '21',
 
-{
+    modelId: '7825',
 
-brandId: '21',
+    yearId: '2020-5',
 
-modelId: '7825',
+    response: {
+      vehicleType: 1,
 
-yearId: '2020-5',
+      price: 'R$ 45.828,00',
 
-response: {
+      brand: 'Fiat',
 
-vehicleType: 1,
+      model: 'MOBI DRIVE 1.0 Flex 6V 5p',
 
-price: 'R$ 45.828,00',
+      modelYear: 2020,
 
-brand: 'Fiat',
+      fuel: 'Flex',
 
-model: 'MOBI DRIVE 1.0 Flex 6V 5p',
+      codeFipe: '001480-0',
 
-modelYear: 2020,
+      referenceMonth: 'novembro de 2026',
 
-fuel: 'Flex',
+      fuelAcronym: 'F',
+    },
+  },
 
-codeFipe: '001480-0',
+  {
+    brandId: '21',
 
-referenceMonth: 'novembro de 2026',
+    modelId: '10392',
 
-fuelAcronym: 'F',
+    yearId: '2023-5',
 
-},
+    response: {
+      vehicleType: 1,
 
-},
+      price: 'R$ 76.387,00',
 
-{
+      brand: 'Fiat',
 
-brandId: '21',
+      model: 'ARGO DRIVE 1.3 8V Flex Aut.',
 
-modelId: '10392',
+      modelYear: 2023,
 
-yearId: '2023-5',
+      fuel: 'Flex',
 
-response: {
+      codeFipe: '001561-0',
 
-vehicleType: 1,
+      referenceMonth: 'novembro de 2026',
 
-price: 'R$ 76.387,00',
+      fuelAcronym: 'F',
+    },
+  },
 
-brand: 'Fiat',
+  {
+    brandId: '21',
 
-model: 'ARGO DRIVE 1.3 8V Flex Aut.',
+    modelId: '9990',
 
-modelYear: 2023,
+    yearId: '2023-5',
 
-fuel: 'Flex',
+    response: {
+      vehicleType: 1,
 
-codeFipe: '001561-0',
+      price: 'R$ 77.375,00',
 
-referenceMonth: 'novembro de 2026',
+      brand: 'Fiat',
 
-fuelAcronym: 'F',
+      model: 'CRONOS DRIVE 1.3 8V Flex Aut.',
 
-},
+      modelYear: 2023,
 
-},
+      fuel: 'Flex',
 
-{
+      codeFipe: '001554-7',
 
-brandId: '21',
+      referenceMonth: 'novembro de 2026',
 
-modelId: '9990',
+      fuelAcronym: 'F',
+    },
+  },
 
-yearId: '2023-5',
+  {
+    brandId: '21',
 
-response: {
+    modelId: '9646',
 
-vehicleType: 1,
+    yearId: '2023-5',
 
-price: 'R$ 77.375,00',
+    response: {
+      vehicleType: 1,
 
-brand: 'Fiat',
+      price: 'R$ 85.095,00',
 
-model: 'CRONOS DRIVE 1.3 8V Flex Aut.',
+      brand: 'Fiat',
 
-modelYear: 2023,
+      model: 'PULSE DRIVE 1.0 Turbo 200 Flex Aut.',
 
-fuel: 'Flex',
+      modelYear: 2023,
 
-codeFipe: '001554-7',
+      fuel: 'Flex',
 
-referenceMonth: 'novembro de 2026',
+      codeFipe: '001543-1',
 
-fuelAcronym: 'F',
+      referenceMonth: 'novembro de 2026',
 
-},
+      fuelAcronym: 'F',
+    },
+  },
 
-},
+  {
+    brandId: '21',
 
-{
+    modelId: '10754',
 
-brandId: '21',
+    yearId: '2024-5',
 
-modelId: '9646',
+    response: {
+      vehicleType: 1,
 
-yearId: '2023-5',
+      price: 'R$ 96.673,00',
 
-response: {
+      brand: 'Fiat',
 
-vehicleType: 1,
+      model: 'Fastback 1.0 200 Turbo Flex Aut',
 
-price: 'R$ 85.095,00',
+      modelYear: 2024,
 
-brand: 'Fiat',
+      fuel: 'Flex',
 
-model: 'PULSE DRIVE 1.0 Turbo 200 Flex Aut.',
+      codeFipe: '001568-7',
 
-modelYear: 2023,
+      referenceMonth: 'novembro de 2026',
 
-fuel: 'Flex',
+      fuelAcronym: 'F',
+    },
+  },
 
-codeFipe: '001543-1',
+  {
+    brandId: '59',
 
-referenceMonth: 'novembro de 2026',
+    modelId: '10107',
 
-fuelAcronym: 'F',
+    yearId: '2023-5',
 
-},
+    response: {
+      vehicleType: 1,
 
-},
+      price: 'R$ 68.486,00',
 
-{
+      brand: 'VW - VolksWagen',
 
-brandId: '21',
+      model: 'Polo 1.0 MPI Flex 12V 5p',
 
-modelId: '10754',
+      modelYear: 2023,
 
-yearId: '2024-5',
+      fuel: 'Flex',
 
-response: {
+      codeFipe: '005533-6',
 
-vehicleType: 1,
+      referenceMonth: 'novembro de 2026',
 
-price: 'R$ 96.673,00',
+      fuelAcronym: 'F',
+    },
+  },
 
-brand: 'Fiat',
+  {
+    brandId: '59',
 
-model: 'Fastback 1.0 200 Turbo Flex Aut',
+    modelId: '10108',
 
-modelYear: 2024,
+    yearId: '2023-5',
 
-fuel: 'Flex',
+    response: {
+      vehicleType: 1,
 
-codeFipe: '001568-7',
+      price: 'R$ 76.116,00',
 
-referenceMonth: 'novembro de 2026',
+      brand: 'VW - VolksWagen',
 
-fuelAcronym: 'F',
+      model: 'Polo 1.0 TSI Flex 12V 5p',
 
-},
+      modelYear: 2023,
 
-},
+      fuel: 'Flex',
 
-{
+      codeFipe: '005534-4',
 
-brandId: '59',
+      referenceMonth: 'novembro de 2026',
 
-modelId: '10107',
+      fuelAcronym: 'F',
+    },
+  },
 
-yearId: '2023-5',
+  {
+    brandId: '59',
 
-response: {
+    modelId: '11300',
 
-vehicleType: 1,
+    yearId: '2025-5',
 
-price: 'R$ 68.486,00',
+    response: {
+      vehicleType: 1,
 
-brand: 'VW - VolksWagen',
+      price: 'R$ 90.250,00',
 
-model: 'Polo 1.0 MPI Flex 12V 5p',
+      brand: 'VW - VolksWagen',
 
-modelYear: 2023,
+      model: 'VIRTUS Sense 1.0 Flex 12V 5p Mec. ',
 
-fuel: 'Flex',
+      modelYear: 2025,
 
-codeFipe: '005533-6',
+      fuel: 'Flex',
 
-referenceMonth: 'novembro de 2026',
+      codeFipe: '005551-4',
 
-fuelAcronym: 'F',
+      referenceMonth: 'novembro de 2026',
 
-},
+      fuelAcronym: 'F',
+    },
+  },
 
-},
+  {
+    brandId: '59',
 
-{
+    modelId: '8186',
 
-brandId: '59',
+    yearId: '2021-5',
 
-modelId: '10108',
+    response: {
+      vehicleType: 1,
 
-yearId: '2023-5',
+      price: 'R$ 86.283,00',
 
-response: {
+      brand: 'VW - VolksWagen',
 
-vehicleType: 1,
+      model: 'VIRTUS Highline 200 TSI 1.0 Flex 12V Aut',
 
-price: 'R$ 76.116,00',
+      modelYear: 2021,
 
-brand: 'VW - VolksWagen',
+      fuel: 'Flex',
 
-model: 'Polo 1.0 TSI Flex 12V 5p',
+      codeFipe: '005484-4',
 
-modelYear: 2023,
+      referenceMonth: 'novembro de 2026',
 
-fuel: 'Flex',
+      fuelAcronym: 'F',
+    },
+  },
 
-codeFipe: '005534-4',
+  {
+    brandId: '59',
 
-referenceMonth: 'novembro de 2026',
+    modelId: '10376',
 
-fuelAcronym: 'F',
+    yearId: '2023-5',
 
-},
+    response: {
+      vehicleType: 1,
 
-},
+      price: 'R$ 91.739,00',
 
-{
+      brand: 'VW - VolksWagen',
 
-brandId: '59',
+      model: 'T-Cross Sense 200 TSI 1.0 Flex 5p Aut.',
 
-modelId: '11300',
+      modelYear: 2023,
 
-yearId: '2025-5',
+      fuel: 'Flex',
 
-response: {
+      codeFipe: '005520-4',
 
-vehicleType: 1,
+      referenceMonth: 'novembro de 2026',
 
-price: 'R$ 90.250,00',
+      fuelAcronym: 'F',
+    },
+  },
 
-brand: 'VW - VolksWagen',
+  {
+    brandId: '59',
 
-model: 'VIRTUS Sense 1.0 Flex 12V 5p Mec. ',
+    modelId: '9150',
 
-modelYear: 2025,
+    yearId: '2022-5',
 
-fuel: 'Flex',
+    response: {
+      vehicleType: 1,
 
-codeFipe: '005551-4',
+      price: 'R$ 94.952,00',
 
-referenceMonth: 'novembro de 2026',
+      brand: 'VW - VolksWagen',
 
-fuelAcronym: 'F',
+      model: 'Nivus Comfortline 1.0 200 TSI Flex Aut.',
 
-},
+      modelYear: 2022,
 
-},
+      fuel: 'Flex',
 
-{
+      codeFipe: '005525-5',
 
-brandId: '59',
+      referenceMonth: 'novembro de 2026',
 
-modelId: '8186',
+      fuelAcronym: 'F',
+    },
+  },
 
-yearId: '2021-5',
+  {
+    brandId: '59',
 
-response: {
+    modelId: '8323',
 
-vehicleType: 1,
+    yearId: '2021-5',
 
-price: 'R$ 86.283,00',
+    response: {
+      vehicleType: 1,
 
-brand: 'VW - VolksWagen',
+      price: 'R$ 46.837,00',
 
-model: 'VIRTUS Highline 200 TSI 1.0 Flex 12V Aut',
+      brand: 'VW - VolksWagen',
 
-modelYear: 2021,
+      model: 'Gol 1.0 Flex 12V 5p',
 
-fuel: 'Flex',
+      modelYear: 2021,
 
-codeFipe: '005484-4',
+      fuel: 'Flex',
 
-referenceMonth: 'novembro de 2026',
+      codeFipe: '005490-9',
 
-fuelAcronym: 'F',
+      referenceMonth: 'novembro de 2026',
 
-},
+      fuelAcronym: 'F',
+    },
+  },
 
-},
+  {
+    brandId: '23',
 
-{
+    modelId: '8949',
 
-brandId: '59',
+    yearId: '2022-5',
 
-modelId: '10376',
+    response: {
+      vehicleType: 1,
 
-yearId: '2023-5',
+      price: 'R$ 61.082,00',
 
-response: {
+      brand: 'GM - Chevrolet',
 
-vehicleType: 1,
+      model: 'ONIX HATCH LT 1.0 12V Flex 5p Mec.',
 
-price: 'R$ 91.739,00',
+      modelYear: 2022,
 
-brand: 'VW - VolksWagen',
+      fuel: 'Flex',
 
-model: 'T-Cross Sense 200 TSI 1.0 Flex 5p Aut.',
+      codeFipe: '004517-9',
 
-modelYear: 2023,
+      referenceMonth: 'novembro de 2026',
 
-fuel: 'Flex',
+      fuelAcronym: 'F',
+    },
+  },
 
-codeFipe: '005520-4',
+  {
+    brandId: '23',
 
-referenceMonth: 'novembro de 2026',
+    modelId: '8889',
 
-fuelAcronym: 'F',
+    yearId: '2024-5',
 
-},
+    response: {
+      vehicleType: 1,
 
-},
+      price: 'R$ 74.487,00',
 
-{
+      brand: 'GM - Chevrolet',
 
-brandId: '59',
+      model: 'ONIX HATCH 1.0 12V TB Flex 5p Aut.',
 
-modelId: '9150',
+      modelYear: 2024,
 
-yearId: '2022-5',
+      fuel: 'Flex',
 
-response: {
+      codeFipe: '004511-0',
 
-vehicleType: 1,
+      referenceMonth: 'novembro de 2026',
 
-price: 'R$ 94.952,00',
+      fuelAcronym: 'F',
+    },
+  },
 
-brand: 'VW - VolksWagen',
+  {
+    brandId: '23',
 
-model: 'Nivus Comfortline 1.0 200 TSI Flex Aut.',
+    modelId: '9046',
 
-modelYear: 2022,
+    yearId: '2023-5',
 
-fuel: 'Flex',
+    response: {
+      vehicleType: 1,
 
-codeFipe: '005525-5',
+      price: 'R$ 90.851,00',
 
-referenceMonth: 'novembro de 2026',
+      brand: 'GM - Chevrolet',
 
-fuelAcronym: 'F',
+      model: 'TRACKER LT 1.0 Turbo 12V Flex Aut.',
 
-},
+      modelYear: 2023,
 
-},
+      fuel: 'Flex',
 
-{
+      codeFipe: '004522-5',
 
-brandId: '59',
+      referenceMonth: 'novembro de 2026',
 
-modelId: '8323',
+      fuelAcronym: 'F',
+    },
+  },
 
-yearId: '2021-5',
+  {
+    brandId: '23',
 
-response: {
+    modelId: '6103',
 
-vehicleType: 1,
+    yearId: '2022-5',
 
-price: 'R$ 46.837,00',
+    response: {
+      vehicleType: 1,
 
-brand: 'VW - VolksWagen',
+      price: 'R$ 74.772,00',
 
-model: 'Gol 1.0 Flex 12V 5p',
+      brand: 'GM - Chevrolet',
 
-modelYear: 2021,
+      model: 'SPIN LT 1.8 8V Econo.Flex 5p Aut.',
 
-fuel: 'Flex',
+      modelYear: 2022,
 
-codeFipe: '005490-9',
+      fuel: 'Flex',
 
-referenceMonth: 'novembro de 2026',
+      codeFipe: '004415-6',
 
-fuelAcronym: 'F',
+      referenceMonth: 'novembro de 2026',
 
-},
+      fuelAcronym: 'F',
+    },
+  },
 
-},
+  {
+    brandId: '23',
 
-{
+    modelId: '10402',
 
-brandId: '23',
+    yearId: '2024-5',
 
-modelId: '8949',
+    response: {
+      vehicleType: 1,
 
-yearId: '2022-5',
+      price: 'R$ 97.513,00',
 
-response: {
+      brand: 'GM - Chevrolet',
 
-vehicleType: 1,
+      model: 'MONTANA LT 1.2 Turbo Flex 12V 4p Mec.',
 
-price: 'R$ 61.082,00',
+      modelYear: 2024,
 
-brand: 'GM - Chevrolet',
+      fuel: 'Flex',
 
-model: 'ONIX HATCH LT 1.0 12V Flex 5p Mec.',
+      codeFipe: '004540-3',
 
-modelYear: 2022,
+      referenceMonth: 'novembro de 2026',
 
-fuel: 'Flex',
+      fuelAcronym: 'F',
+    },
+  },
 
-codeFipe: '004517-9',
+  {
+    brandId: '26',
 
-referenceMonth: 'novembro de 2026',
+    modelId: '9906',
 
-fuelAcronym: 'F',
+    yearId: '2023-5',
 
-},
+    response: {
+      vehicleType: 1,
 
-},
+      price: 'R$ 62.837,00',
 
-{
+      brand: 'Hyundai',
 
-brandId: '23',
+      model: 'HB20 Comfort 1.0 Flex 12V Mec.',
 
-modelId: '8889',
+      modelYear: 2023,
 
-yearId: '2024-5',
+      fuel: 'Flex',
 
-response: {
+      codeFipe: '015215-3',
 
-vehicleType: 1,
+      referenceMonth: 'novembro de 2026',
 
-price: 'R$ 74.487,00',
+      fuelAcronym: 'F',
+    },
+  },
 
-brand: 'GM - Chevrolet',
+  {
+    brandId: '26',
 
-model: 'ONIX HATCH 1.0 12V TB Flex 5p Aut.',
+    modelId: '9907',
 
-modelYear: 2024,
+    yearId: '2023-5',
 
-fuel: 'Flex',
+    response: {
+      vehicleType: 1,
 
-codeFipe: '004511-0',
+      price: 'R$ 78.447,00',
 
-referenceMonth: 'novembro de 2026',
+      brand: 'Hyundai',
 
-fuelAcronym: 'F',
+      model: 'HB20 Comfort 1.0 TB Flex 12V Aut',
 
-},
+      modelYear: 2023,
 
-},
+      fuel: 'Flex',
 
-{
+      codeFipe: '015214-5',
 
-brandId: '23',
+      referenceMonth: 'novembro de 2026',
 
-modelId: '9046',
+      fuelAcronym: 'F',
+    },
+  },
+  {
+    brandId: '26',
 
-yearId: '2023-5',
+    modelId: '9601',
 
-response: {
+    yearId: '2023-5',
 
-vehicleType: 1,
+    response: {
+      vehicleType: 1,
 
-price: 'R$ 90.851,00',
+      price: 'R$ 103.100,00',
 
-brand: 'GM - Chevrolet',
+      brand: 'Hyundai',
 
-model: 'TRACKER LT 1.0 Turbo 12V Flex Aut.',
+      model: 'Creta Comfort 1.0 TB 12V Flex Aut.',
 
-modelYear: 2023,
+      modelYear: 2023,
 
-fuel: 'Flex',
+      fuel: 'Flex',
 
-codeFipe: '004522-5',
+      codeFipe: '015200-5',
 
-referenceMonth: 'novembro de 2026',
+      referenceMonth: 'novembro de 2026',
 
-fuelAcronym: 'F',
+      fuelAcronym: 'F',
+    },
+  },
 
-},
+  {
+    brandId: '56',
 
-},
+    modelId: '9984',
 
-{
+    yearId: '2023-6',
 
-brandId: '23',
+    response: {
+      vehicleType: 1,
 
-modelId: '6103',
+      price: 'R$ 135.892,00',
 
-yearId: '2022-5',
+      brand: 'Toyota',
 
-response: {
+      model: 'Corolla Altis 1.8 16V Aut. (Híbrido)',
 
-vehicleType: 1,
+      modelYear: 2023,
 
-price: 'R$ 74.772,00',
+      fuel: 'Híbrido',
 
-brand: 'GM - Chevrolet',
+      codeFipe: '002182-2',
 
-model: 'SPIN LT 1.8 8V Econo.Flex 5p Aut.',
+      referenceMonth: 'novembro de 2026',
 
-modelYear: 2022,
+      fuelAcronym: 'H',
+    },
+  },
 
-fuel: 'Flex',
+  {
+    brandId: '56',
 
-codeFipe: '004415-6',
+    modelId: '9326',
 
-referenceMonth: 'novembro de 2026',
+    yearId: '2022-5',
 
-fuelAcronym: 'F',
+    response: {
+      vehicleType: 1,
 
-},
+      price: 'R$ 124.306,00',
 
-},
+      brand: 'Toyota',
 
-{
+      model: 'Corolla Cross XRE 2.0 16V Flex Aut.',
 
-brandId: '23',
+      modelYear: 2022,
 
-modelId: '10402',
+      fuel: 'Flex',
 
-yearId: '2024-5',
+      codeFipe: '002203-9',
 
-response: {
+      referenceMonth: 'novembro de 2026',
 
-vehicleType: 1,
+      fuelAcronym: 'F',
+    },
+  },
 
-price: 'R$ 97.513,00',
+  {
+    brandId: '56',
 
-brand: 'GM - Chevrolet',
+    modelId: '9726',
 
-model: 'MONTANA LT 1.2 Turbo Flex 12V 4p Mec.',
+    yearId: '2023-5',
 
-modelYear: 2024,
+    response: {
+      vehicleType: 1,
 
-fuel: 'Flex',
+      price: 'R$ 82.181,00',
 
-codeFipe: '004540-3',
+      brand: 'Toyota',
 
-referenceMonth: 'novembro de 2026',
+      model: 'YARIS XL 1.5 Flex 16V 5p Aut.',
 
-fuelAcronym: 'F',
+      modelYear: 2023,
 
-},
+      fuel: 'Flex',
 
-},
+      codeFipe: '002207-1',
 
-{
+      referenceMonth: 'novembro de 2026',
 
-brandId: '26',
+      fuelAcronym: 'F',
+    },
+  },
 
-modelId: '9906',
+  {
+    brandId: '25',
 
-yearId: '2023-5',
+    modelId: '10964',
 
-response: {
+    yearId: '2024-5',
 
-vehicleType: 1,
+    response: {
+      vehicleType: 1,
 
-price: 'R$ 62.837,00',
+      price: 'R$ 102.652,00',
 
-brand: 'Hyundai',
+      brand: 'Honda',
 
-model: 'HB20 Comfort 1.0 Flex 12V Mec.',
+      model: 'CITY Hatchback EX 1.5 Flex 16V Aut.',
 
-modelYear: 2023,
+      modelYear: 2024,
 
-fuel: 'Flex',
+      fuel: 'Flex',
 
-codeFipe: '015215-3',
+      codeFipe: '014115-1',
 
-referenceMonth: 'novembro de 2026',
+      referenceMonth: 'novembro de 2026',
 
-fuelAcronym: 'F',
+      fuelAcronym: 'F',
+    },
+  },
 
-},
+  {
+    brandId: '25',
 
-},
+    modelId: '10217',
 
-{
+    yearId: '2023-5',
 
-brandId: '26',
+    response: {
+      vehicleType: 1,
 
-modelId: '9907',
+      price: 'R$ 127.988,00',
 
-yearId: '2023-5',
+      brand: 'Honda',
 
-response: {
+      model: 'HR-V EX 1.5 Flex Sensing 16V 5p Aut.',
 
-vehicleType: 1,
+      modelYear: 2023,
 
-price: 'R$ 78.447,00',
+      fuel: 'Flex',
 
-brand: 'Hyundai',
+      codeFipe: '014109-7',
 
-model: 'HB20 Comfort 1.0 TB Flex 12V Aut',
+      referenceMonth: 'novembro de 2026',
 
-modelYear: 2023,
+      fuelAcronym: 'F',
+    },
+  },
 
-fuel: 'Flex',
+  {
+    brandId: '48',
 
-codeFipe: '015214-5',
+    modelId: '8023',
 
-referenceMonth: 'novembro de 2026',
+    yearId: '2022-5',
 
-fuelAcronym: 'F',
+    response: {
+      vehicleType: 1,
 
-},
+      price: 'R$ 44.308,00',
 
-},
-{
+      brand: 'Renault',
 
-brandId: '26',
+      model: 'KWID Zen 1.0 Flex 12V 5p Mec.',
 
-modelId: '9601',
+      modelYear: 2022,
 
-yearId: '2023-5',
+      fuel: 'Flex',
 
-response: {
+      codeFipe: '025266-2',
 
-vehicleType: 1,
+      referenceMonth: 'novembro de 2026',
 
-price: 'R$ 103.100,00',
+      fuelAcronym: 'F',
+    },
+  },
 
-brand: 'Hyundai',
+  {
+    brandId: '48',
 
-model: 'Creta Comfort 1.0 TB 12V Flex Aut.',
+    modelId: '7993',
 
-modelYear: 2023,
+    yearId: '2020-5',
 
-fuel: 'Flex',
+    response: {
+      vehicleType: 1,
 
-codeFipe: '015200-5',
+      price: 'R$ 70.488,00',
 
-referenceMonth: 'novembro de 2026',
+      brand: 'Renault',
 
-fuelAcronym: 'F',
+      model: 'DUSTER Dynamique 1.6 Flex 16V Aut.',
 
-},
+      modelYear: 2020,
 
-},
+      fuel: 'Flex',
 
-{
+      codeFipe: '025264-6',
 
-brandId: '56',
+      referenceMonth: 'novembro de 2026',
 
-modelId: '9984',
+      fuelAcronym: 'F',
+    },
+  },
 
-yearId: '2023-6',
+  {
+    brandId: '29',
 
-response: {
+    modelId: '9745',
 
-vehicleType: 1,
+    yearId: '2023-5',
 
-price: 'R$ 135.892,00',
+    response: {
+      vehicleType: 1,
 
-brand: 'Toyota',
+      price: 'R$ 97.160,00',
 
-model: 'Corolla Altis 1.8 16V Aut. (Híbrido)',
+      brand: 'Jeep',
 
-modelYear: 2023,
+      model: 'Renegade Long. T270 1.3 TB 4x2 Flex Aut.',
 
-fuel: 'Híbrido',
+      modelYear: 2023,
 
-codeFipe: '002182-2',
+      fuel: 'Flex',
 
-referenceMonth: 'novembro de 2026',
+      codeFipe: '017088-7',
 
-fuelAcronym: 'H',
+      referenceMonth: 'novembro de 2026',
 
-},
+      fuelAcronym: 'F',
+    },
+  },
 
-},
+  {
+    brandId: '29',
 
-{
+    modelId: '9457',
 
-brandId: '56',
+    yearId: '2023-5',
 
-modelId: '9326',
+    response: {
+      vehicleType: 1,
 
-yearId: '2022-5',
+      price: 'R$ 121.271,00',
 
-response: {
+      brand: 'Jeep',
 
-vehicleType: 1,
+      model: 'COMPASS LONG. T270 1.3 TB 4x2 Flex Aut.',
 
-price: 'R$ 124.306,00',
+      modelYear: 2023,
 
-brand: 'Toyota',
+      fuel: 'Flex',
 
-model: 'Corolla Cross XRE 2.0 16V Flex Aut.',
+      codeFipe: '017071-2',
 
-modelYear: 2022,
+      referenceMonth: 'novembro de 2026',
 
-fuel: 'Flex',
+      fuelAcronym: 'F',
+    },
+  },
 
-codeFipe: '002203-9',
+  {
+    brandId: '43',
 
-referenceMonth: 'novembro de 2026',
+    modelId: '9335',
 
-fuelAcronym: 'F',
+    yearId: '2022-5',
 
-},
+    response: {
+      vehicleType: 1,
 
-},
+      price: 'R$ 90.518,00',
 
-{
+      brand: 'Nissan',
 
-brandId: '56',
+      model: 'KICKS Advance 1.6 16V Flex Aut.',
 
-modelId: '9726',
+      modelYear: 2022,
 
-yearId: '2023-5',
+      fuel: 'Flex',
 
-response: {
+      codeFipe: '023180-0',
 
-vehicleType: 1,
+      referenceMonth: 'novembro de 2026',
 
-price: 'R$ 82.181,00',
+      fuelAcronym: 'F',
+    },
+  },
 
-brand: 'Toyota',
+  {
+    brandId: '43',
 
-model: 'YARIS XL 1.5 Flex 16V 5p Aut.',
+    modelId: '9233',
 
-modelYear: 2023,
+    yearId: '2023-5',
 
-fuel: 'Flex',
+    response: {
+      vehicleType: 1,
 
-codeFipe: '002207-1',
+      price: 'R$ 83.266,00',
 
-referenceMonth: 'novembro de 2026',
+      brand: 'Nissan',
 
-fuelAcronym: 'F',
+      model: 'VERSA Sense 1.6 16V Flex Aut.',
 
-},
+      modelYear: 2023,
 
-},
+      fuel: 'Flex',
 
-{
+      codeFipe: '023176-2',
 
-brandId: '25',
+      referenceMonth: 'novembro de 2026',
 
-modelId: '10964',
+      fuelAcronym: 'F',
+    },
+  },
 
-yearId: '2024-5',
+  {
+    brandId: '44',
 
-response: {
+    modelId: '11093',
 
-vehicleType: 1,
+    yearId: '2024-5',
 
-price: 'R$ 102.652,00',
+    response: {
+      vehicleType: 1,
 
-brand: 'Honda',
+      price: 'R$ 79.642,00',
 
-model: 'CITY Hatchback EX 1.5 Flex 16V Aut.',
+      brand: 'Peugeot',
 
-modelYear: 2024,
+      model: '208 Allure 1.0 Turbo Flex 5p Aut.',
 
-fuel: 'Flex',
+      modelYear: 2024,
 
-codeFipe: '014115-1',
+      fuel: 'Flex',
 
-referenceMonth: 'novembro de 2026',
+      codeFipe: '024273-0',
 
-fuelAcronym: 'F',
+      referenceMonth: 'novembro de 2026',
 
-},
+      fuelAcronym: 'F',
+    },
+  },
 
-},
+  {
+    brandId: '13',
 
-{
+    modelId: '10091',
 
-brandId: '25',
+    yearId: '2023-5',
 
-modelId: '10217',
+    response: {
+      vehicleType: 1,
 
-yearId: '2023-5',
+      price: 'R$ 61.352,00',
 
-response: {
+      brand: 'Citroën',
 
-vehicleType: 1,
+      model: 'C3 Feel 1.0 Flex 6V 5p Mec.',
 
-price: 'R$ 127.988,00',
+      modelYear: 2023,
 
-brand: 'Honda',
+      fuel: 'Flex',
 
-model: 'HR-V EX 1.5 Flex Sensing 16V 5p Aut.',
+      codeFipe: '011224-0',
 
-modelYear: 2023,
+      referenceMonth: 'novembro de 2026',
 
-fuel: 'Flex',
+      fuelAcronym: 'F',
+    },
+  },
 
-codeFipe: '014109-7',
+  {
+    brandId: '238',
 
-referenceMonth: 'novembro de 2026',
+    modelId: '12124',
 
-fuelAcronym: 'F',
+    yearId: '2024-4',
 
-},
+    response: {
+      vehicleType: 1,
 
-},
+      price: 'R$ 99.985,00',
 
-{
+      brand: 'BYD',
 
-brandId: '48',
+      model: 'Dolphin Mini GS (Elétrico)',
 
-modelId: '8023',
+      modelYear: 2024,
 
-yearId: '2022-5',
+      fuel: 'Elétrico',
 
-response: {
+      codeFipe: '095010-6',
 
-vehicleType: 1,
+      referenceMonth: 'novembro de 2026',
 
-price: 'R$ 44.308,00',
+      fuelAcronym: 'E',
+    },
+  },
 
-brand: 'Renault',
+  {
+    brandId: '13',
 
-model: 'KWID Zen 1.0 Flex 12V 5p Mec.',
+    modelId: '11215',
 
-modelYear: 2022,
+    yearId: '2025-5',
 
-fuel: 'Flex',
+    response: {
+      vehicleType: 1,
 
-codeFipe: '025266-2',
+      price: 'R$ 92.554,00',
 
-referenceMonth: 'novembro de 2026',
+      brand: 'Citroën',
 
-fuelAcronym: 'F',
+      model: 'BASALT Feel 1.0 Flex TB 200 5p Aut.',
 
-},
+      modelYear: 2025,
 
-},
+      fuel: 'Flex',
 
-{
+      codeFipe: '011239-9',
 
-brandId: '48',
+      referenceMonth: 'novembro de 2026',
 
-modelId: '7993',
+      fuelAcronym: 'F',
+    },
+  },
 
-yearId: '2020-5',
+  {
+    brandId: '21',
 
-response: {
+    modelId: '9647',
 
-vehicleType: 1,
+    yearId: '2022-5',
 
-price: 'R$ 70.488,00',
+    response: {
+      vehicleType: 1,
 
-brand: 'Renault',
+      price: 'R$ 83.186,00',
 
-model: 'DUSTER Dynamique 1.6 Flex 16V Aut.',
+      brand: 'Fiat',
 
-modelYear: 2020,
+      model: 'PULSE DRIVE 1.3 8V Flex Aut.',
 
-fuel: 'Flex',
+      modelYear: 2022,
 
-codeFipe: '025264-6',
+      fuel: 'Flex',
 
-referenceMonth: 'novembro de 2026',
+      codeFipe: '001544-0',
 
-fuelAcronym: 'F',
+      referenceMonth: 'novembro de 2026',
 
-},
-
-},
-
-{
-
-brandId: '29',
-
-modelId: '9745',
-
-yearId: '2023-5',
-
-response: {
-
-vehicleType: 1,
-
-price: 'R$ 97.160,00',
-
-brand: 'Jeep',
-
-model: 'Renegade Long. T270 1.3 TB 4x2 Flex Aut.',
-
-modelYear: 2023,
-
-fuel: 'Flex',
-
-codeFipe: '017088-7',
-
-referenceMonth: 'novembro de 2026',
-
-fuelAcronym: 'F',
-
-},
-
-},
-
-{
-
-brandId: '29',
-
-modelId: '9457',
-
-yearId: '2023-5',
-
-response: {
-
-vehicleType: 1,
-
-price: 'R$ 121.271,00',
-
-brand: 'Jeep',
-
-model: 'COMPASS LONG. T270 1.3 TB 4x2 Flex Aut.',
-
-modelYear: 2023,
-
-fuel: 'Flex',
-
-codeFipe: '017071-2',
-
-referenceMonth: 'novembro de 2026',
-
-fuelAcronym: 'F',
-
-},
-
-},
-
-{
-
-brandId: '43',
-
-modelId: '9335',
-
-yearId: '2022-5',
-
-response: {
-
-vehicleType: 1,
-
-price: 'R$ 90.518,00',
-
-brand: 'Nissan',
-
-model: 'KICKS Advance 1.6 16V Flex Aut.',
-
-modelYear: 2022,
-
-fuel: 'Flex',
-
-codeFipe: '023180-0',
-
-referenceMonth: 'novembro de 2026',
-
-fuelAcronym: 'F',
-
-},
-
-},
-
-{
-
-brandId: '43',
-
-modelId: '9233',
-
-yearId: '2023-5',
-
-response: {
-
-vehicleType: 1,
-
-price: 'R$ 83.266,00',
-
-brand: 'Nissan',
-
-model: 'VERSA Sense 1.6 16V Flex Aut.',
-
-modelYear: 2023,
-
-fuel: 'Flex',
-
-codeFipe: '023176-2',
-
-referenceMonth: 'novembro de 2026',
-
-fuelAcronym: 'F',
-
-},
-
-},
-
-{
-
-brandId: '44',
-
-modelId: '11093',
-
-yearId: '2024-5',
-
-response: {
-
-vehicleType: 1,
-
-price: 'R$ 79.642,00',
-
-brand: 'Peugeot',
-
-model: '208 Allure 1.0 Turbo Flex 5p Aut.',
-
-modelYear: 2024,
-
-fuel: 'Flex',
-
-codeFipe: '024273-0',
-
-referenceMonth: 'novembro de 2026',
-
-fuelAcronym: 'F',
-
-},
-
-},
-
-{
-
-brandId: '13',
-
-modelId: '10091',
-
-yearId: '2023-5',
-
-response: {
-
-vehicleType: 1,
-
-price: 'R$ 61.352,00',
-
-brand: 'Citroën',
-
-model: 'C3 Feel 1.0 Flex 6V 5p Mec.',
-
-modelYear: 2023,
-
-fuel: 'Flex',
-
-codeFipe: '011224-0',
-
-referenceMonth: 'novembro de 2026',
-
-fuelAcronym: 'F',
-
-},
-
-},
-
-{
-
-brandId: '238',
-
-modelId: '12124',
-
-yearId: '2024-4',
-
-response: {
-
-vehicleType: 1,
-
-price: 'R$ 99.985,00',
-
-brand: 'BYD',
-
-model: 'Dolphin Mini GS (Elétrico)',
-
-modelYear: 2024,
-
-fuel: 'Elétrico',
-
-codeFipe: '095010-6',
-
-referenceMonth: 'novembro de 2026',
-
-fuelAcronym: 'E',
-
-},
-
-},
-
-{
-
-brandId: '13',
-
-modelId: '11215',
-
-yearId: '2025-5',
-
-response: {
-
-vehicleType: 1,
-
-price: 'R$ 92.554,00',
-
-brand: 'Citroën',
-
-model: 'BASALT Feel 1.0 Flex TB 200 5p Aut.',
-
-modelYear: 2025,
-
-fuel: 'Flex',
-
-codeFipe: '011239-9',
-
-referenceMonth: 'novembro de 2026',
-
-fuelAcronym: 'F',
-
-},
-
-},
-
-{
-
-brandId: '21',
-
-modelId: '9647',
-
-yearId: '2022-5',
-
-response: {
-
-vehicleType: 1,
-
-price: 'R$ 83.186,00',
-
-brand: 'Fiat',
-
-model: 'PULSE DRIVE 1.3 8V Flex Aut.',
-
-modelYear: 2022,
-
-fuel: 'Flex',
-
-codeFipe: '001544-0',
-
-referenceMonth: 'novembro de 2026',
-
-fuelAcronym: 'F',
-
-},
-
-},
-
+      fuelAcronym: 'F',
+    },
+  },
 ]

@@ -1,36 +1,26 @@
 /** Normaliza texto para comparação: minúsculas, sem acentos e sem espaços extras. */
 
 export function normalizeText(value: string): string {
+  return value
 
-return value
+    .normalize('NFD')
 
-.normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
 
-.replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
 
-.toLowerCase()
+    .replace(/\s+/g, ' ')
 
-.replace(/\s+/g, ' ')
-
-.trim()
-
+    .trim()
 }
 
-
-
 export const UNAVAILABLE_TEXT = 'Informação não disponível'
-
-
 
 /** Comparação alfabética em pt-BR (acentos e maiúsculas não alteram a ordem). */
 
 export function compareText(a: string, b: string): number {
-
-return a.localeCompare(b, 'pt-BR', { sensitivity: 'base' })
-
+  return a.localeCompare(b, 'pt-BR', { sensitivity: 'base' })
 }
-
-
 
 /**
 
@@ -43,19 +33,13 @@ return a.localeCompare(b, 'pt-BR', { sensitivity: 'base' })
 */
 
 export function htmlToPlainText(html: string): string {
+  let text: string
 
-let text: string
+  if (typeof DOMParser !== 'undefined') {
+    text = new DOMParser().parseFromString(html, 'text/html').body.textContent ?? ''
+  } else {
+    text = html.replace(/<[^>]*>/g, ' ')
+  }
 
-if (typeof DOMParser !== 'undefined') {
-
-text = new DOMParser().parseFromString(html, 'text/html').body.textContent ?? ''
-
-} else {
-
-text = html.replace(/<[^>]*>/g, ' ')
-
-}
-
-return text.replace(/\s+/g, ' ').trim()
-
+  return text.replace(/\s+/g, ' ').trim()
 }

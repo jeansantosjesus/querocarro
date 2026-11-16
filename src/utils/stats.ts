@@ -1,238 +1,183 @@
 /** Percentil com interpolação linear. `values` não precisa estar ordenado. */
 
 export function percentile(values: readonly number[], p: number): number | null {
+  if (values.length === 0) return null
 
-if (values.length === 0) return null
+  const sorted = [...values].sort((a, b) => a - b)
 
-const sorted = [...values].sort((a, b) => a - b)
+  const position = (sorted.length - 1) * Math.min(Math.max(p, 0), 1)
 
-const position = (sorted.length - 1) * Math.min(Math.max(p, 0), 1)
+  const lower = Math.floor(position)
 
-const lower = Math.floor(position)
+  const upper = Math.ceil(position)
 
-const upper = Math.ceil(position)
+  const lowerValue = sorted[lower]
 
-const lowerValue = sorted[lower]
+  const upperValue = sorted[upper]
 
-const upperValue = sorted[upper]
+  if (lowerValue === undefined || upperValue === undefined) return null
 
-if (lowerValue === undefined || upperValue === undefined) return null
-
-return lowerValue + (upperValue - lowerValue) * (position - lower)
-
+  return lowerValue + (upperValue - lowerValue) * (position - lower)
 }
-
-
 
 export interface IqrFences {
+  q1: number
 
-q1: number
+  q3: number
 
-q3: number
+  iqr: number
 
-iqr: number
+  lower: number
 
-lower: number
-
-upper: number
-
+  upper: number
 }
-
-
 
 /** Cercas de Tukey. `k = 1.5` (suave) ou `k = 3` (extremo). Retorna null se IQR = 0. */
 
 export function iqrFences(values: readonly number[], k: number): IqrFences | null {
+  const q1 = percentile(values, 0.25)
 
-const q1 = percentile(values, 0.25)
+  const q3 = percentile(values, 0.75)
 
-const q3 = percentile(values, 0.75)
+  if (q1 === null || q3 === null) return null
 
-if (q1 === null || q3 === null) return null
+  const iqr = q3 - q1
 
-const iqr = q3 - q1
+  if (iqr <= 0) return null
 
-if (iqr <= 0) return null
-
-return { q1, q3, iqr, lower: q1 - k * iqr, upper: q3 + k * iqr }
-
+  return { q1, q3, iqr, lower: q1 - k * iqr, upper: q3 + k * iqr }
 }
-
-
 
 export function clamp(value: number, min: number, max: number): number {
-
-return Math.min(Math.max(value, min), max)
-
+  return Math.min(Math.max(value, min), max)
 }
-
-
 
 /** Separa valores numéricos finitos dos ausentes (null, undefined, NaN, Infinity). */
 
 export function splitFinite(values: readonly (number | null | undefined)[]): {
+  values: number[]
 
-values: number[]
-
-missing: number
-
+  missing: number
 } {
+  const finite: number[] = []
 
-const finite: number[] = []
+  let missing = 0
 
-let missing = 0
+  for (const value of values) {
+    if (typeof value === 'number' && Number.isFinite(value)) finite.push(value)
+    else missing += 1
+  }
 
-for (const value of values) {
-
-if (typeof value === 'number' && Number.isFinite(value)) finite.push(value)
-
-else missing += 1
-
+  return { values: finite, missing }
 }
-
-return { values: finite, missing }
-
-}
-
-
 
 export function mean(values: readonly number[]): number | null {
+  if (values.length === 0) return null
 
-if (values.length === 0) return null
-
-return values.reduce((sum, value) => sum + value, 0) / values.length
-
+  return values.reduce((sum, value) => sum + value, 0) / values.length
 }
-
-
 
 export function median(values: readonly number[]): number | null {
-
-return percentile(values, 0.5)
-
+  return percentile(values, 0.5)
 }
-
-
 
 /** Desvio padrão amostral (n - 1). Retorna null com menos de 2 valores. */
 
 export function sampleStdDev(values: readonly number[]): number | null {
+  if (values.length < 2) return null
 
-if (values.length < 2) return null
+  const avg = mean(values)
 
-const avg = mean(values)
+  if (avg === null) return null
 
-if (avg === null) return null
+  const squares = values.reduce((sum, value) => sum + (value - avg) ** 2, 0)
 
-const squares = values.reduce((sum, value) => sum + (value - avg) ** 2, 0)
-
-return Math.sqrt(squares / (values.length - 1))
-
+  return Math.sqrt(squares / (values.length - 1))
 }
-
-
 
 /** Desvio padrão / média. Retorna null se a média for zero ou o desvio indisponível. */
 
 export function coefficientOfVariation(values: readonly number[]): number | null {
+  const avg = mean(values)
 
-const avg = mean(values)
+  const std = sampleStdDev(values)
 
-const std = sampleStdDev(values)
+  if (avg === null || std === null || avg === 0) return null
 
-if (avg === null || std === null || avg === 0) return null
-
-return std / Math.abs(avg)
-
+  return std / Math.abs(avg)
 }
-
-
 
 export interface StatSummary {
+  count: number
 
-count: number
+  missing: number
 
-missing: number
+  min: number | null
 
-min: number | null
+  max: number | null
 
-max: number | null
+  range: number | null
 
-range: number | null
+  mean: number | null
 
-mean: number | null
+  median: number | null
 
-median: number | null
+  q1: number | null
 
-q1: number | null
+  q3: number | null
 
-q3: number | null
+  stdDev: number | null
 
-stdDev: number | null
-
-coefficientOfVariation: number | null
-
+  coefficientOfVariation: number | null
 }
-
-
 
 /** Resumo descritivo. Ausentes são contados em `missing` e nunca entram como zero. */
 
 export function summarize(values: readonly (number | null | undefined)[]): StatSummary {
+  const { values: finite, missing } = splitFinite(values)
 
-const { values: finite, missing } = splitFinite(values)
+  const min = finite.length > 0 ? Math.min(...finite) : null
 
-const min = finite.length > 0 ? Math.min(...finite) : null
+  const max = finite.length > 0 ? Math.max(...finite) : null
 
-const max = finite.length > 0 ? Math.max(...finite) : null
+  return {
+    count: finite.length,
 
-return {
+    missing,
 
-count: finite.length,
+    min,
 
-missing,
+    max,
 
-min,
+    range: min !== null && max !== null ? max - min : null,
 
-max,
+    mean: mean(finite),
 
-range: min !== null && max !== null ? max - min : null,
+    median: median(finite),
 
-mean: mean(finite),
+    q1: percentile(finite, 0.25),
 
-median: median(finite),
+    q3: percentile(finite, 0.75),
 
-q1: percentile(finite, 0.25),
+    stdDev: sampleStdDev(finite),
 
-q3: percentile(finite, 0.75),
-
-stdDev: sampleStdDev(finite),
-
-coefficientOfVariation: coefficientOfVariation(finite),
-
+    coefficientOfVariation: coefficientOfVariation(finite),
+  }
 }
-
-}
-
-
 
 export interface DistributionBand {
+  /** Limite inferior inclusivo; null = sem limite. */
 
-/** Limite inferior inclusivo; null = sem limite. */
+  lower: number | null
 
-lower: number | null
+  /** Limite superior exclusivo; null = sem limite. */
 
-/** Limite superior exclusivo; null = sem limite. */
+  upper: number | null
 
-upper: number | null
+  count: number
 
-count: number
-
-share: number
-
+  share: number
 }
-
-
 
 /**
 
@@ -243,37 +188,29 @@ share: number
 */
 
 export function distributionByBands(
+  values: readonly (number | null | undefined)[],
 
-values: readonly (number | null | undefined)[],
-
-edges: readonly number[],
-
+  edges: readonly number[],
 ): DistributionBand[] {
+  const { values: finite } = splitFinite(values)
 
-const { values: finite } = splitFinite(values)
+  const sortedEdges = [...edges].sort((a, b) => a - b)
 
-const sortedEdges = [...edges].sort((a, b) => a - b)
+  const bounds = [null, ...sortedEdges, null]
 
-const bounds = [null, ...sortedEdges, null]
+  const bands: DistributionBand[] = []
 
-const bands: DistributionBand[] = []
+  for (let index = 0; index < bounds.length - 1; index += 1) {
+    const lower = bounds[index] ?? null
 
-for (let index = 0; index < bounds.length - 1; index += 1) {
+    const upper = bounds[index + 1] ?? null
 
-const lower = bounds[index] ?? null
+    const count = finite.filter(
+      (value) => (lower === null || value >= lower) && (upper === null || value < upper),
+    ).length
 
-const upper = bounds[index + 1] ?? null
+    bands.push({ lower, upper, count, share: finite.length > 0 ? count / finite.length : 0 })
+  }
 
-const count = finite.filter(
-
-(value) => (lower === null || value >= lower) && (upper === null || value < upper),
-
-).length
-
-bands.push({ lower, upper, count, share: finite.length > 0 ? count / finite.length : 0 })
-
-}
-
-return bands
-
+  return bands
 }

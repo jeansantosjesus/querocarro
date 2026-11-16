@@ -303,7 +303,8 @@ export const SUPPLEMENT_DATA: readonly SupplementRecord[] = [
     category: 'hatch',
     trunkLiters: 300,
     seats: 5,
-  },{
+  },
+  {
     fipeCode: '015214-5',
     fipeBrandId: '26',
     fipeModelId: '9907',

@@ -36,419 +36,285 @@ import { useCatalog } from '../features/vehicles/CatalogContext'
 
 import { simulationInputSchema, type SimulationInput } from '../schemas/simulation'
 
-
-
 const PROCESSING_INDEX = WIZARD_STEPS.findIndex((step) => step.id === 'processamento')
 
 const REVIEW_INDEX = WIZARD_STEPS.findIndex((step) => step.id === 'revisao')
 
-
-
 function finiteOr(value: unknown, fallback: number): number {
-
-return typeof value === 'number' && Number.isFinite(value) ? value : fallback
-
+  return typeof value === 'number' && Number.isFinite(value) ? value : fallback
 }
-
-
 
 export function SimulationPage() {
+  const { draft, setDraft, weightsCustomized, commitInput } = useSimulation()
 
-const { draft, setDraft, weightsCustomized, commitInput } = useSimulation()
+  const { isDemo } = useAuth()
 
-const { isDemo } = useAuth()
+  const { load } = useCatalog()
 
-const { load } = useCatalog()
+  const navigate = useNavigate()
 
-const navigate = useNavigate()
+  const form = useForm<SimulationInput>({
+    resolver: zodResolver(simulationInputSchema),
 
+    defaultValues: draft as DefaultValues<SimulationInput>,
 
+    mode: 'onTouched',
+  })
 
-const form = useForm<SimulationInput>({
+  const location = useLocation()
 
-resolver: zodResolver(simulationInputSchema),
+  const [stepIndex, setStepIndex] = useState(() => {
+    const requested = (location.state as { step?: string } | null)?.step
 
-defaultValues: draft as DefaultValues<SimulationInput>,
+    const index = WIZARD_STEPS.findIndex((item) => item.id === requested)
 
-mode: 'onTouched',
+    // Só é permitido abrir uma etapa já validada (até a revisão).
 
-})
+    return index >= 0 && index <= REVIEW_INDEX ? index : 0
+  })
 
+  const [stepError, setStepError] = useState(false)
 
+  const [validationError, setValidationError] = useState<string | null>(null)
 
-const location = useLocation()
+  const headingRef = useRef<HTMLHeadingElement>(null)
 
-const [stepIndex, setStepIndex] = useState(() => {
+  const runId = useRef(0)
 
-const requested = (location.state as { step?: string } | null)?.step
+  // Guarda o rascunho (em memória) ao sair da página, para voltar sem perder dados.
 
-const index = WIZARD_STEPS.findIndex((item) => item.id === requested)
+  const getValues = form.getValues
 
-// Só é permitido abrir uma etapa já validada (até a revisão).
+  useEffect(() => () => setDraft(getValues() as SimulationInput), [getValues, setDraft])
 
-return index >= 0 && index <= REVIEW_INDEX ? index : 0
+  // Enquanto o usuário não personalizou os pesos, eles acompanham cenário e prioridades.
 
-})
+  const scenarioId = useWatch({ control: form.control, name: 'objective.scenarioId' })
 
-const [stepError, setStepError] = useState(false)
+  const economia = useWatch({ control: form.control, name: 'preferences.priorities.economia' })
 
-const [validationError, setValidationError] = useState<string | null>(null)
+  const conforto = useWatch({ control: form.control, name: 'preferences.priorities.conforto' })
 
-const headingRef = useRef<HTMLHeadingElement>(null)
+  const desempenho = useWatch({ control: form.control, name: 'preferences.priorities.desempenho' })
 
-const runId = useRef(0)
+  const manutencao = useWatch({ control: form.control, name: 'preferences.priorities.manutencao' })
 
+  useEffect(() => {
+    if (weightsCustomized) return
 
+    const clamp = (value: unknown) => Math.min(5, Math.max(1, Math.round(finiteOr(value, 3))))
 
-// Guarda o rascunho (em memória) ao sair da página, para voltar sem perder dados.
+    form.setValue(
+      'weights',
 
-const getValues = form.getValues
+      initialWeights(scenarioId, {
+        economia: clamp(economia),
 
-useEffect(() => () => setDraft(getValues() as SimulationInput), [getValues, setDraft])
+        conforto: clamp(conforto),
 
+        desempenho: clamp(desempenho),
 
+        manutencao: clamp(manutencao),
+      }),
+    )
+  }, [scenarioId, economia, conforto, desempenho, manutencao, weightsCustomized, form])
 
-// Enquanto o usuário não personalizou os pesos, eles acompanham cenário e prioridades.
+  useEffect(() => {
+    headingRef.current?.focus()
+  }, [stepIndex])
 
-const scenarioId = useWatch({ control: form.control, name: 'objective.scenarioId' })
+  const step = WIZARD_STEPS[stepIndex]
 
-const economia = useWatch({ control: form.control, name: 'preferences.priorities.economia' })
+  const buildInput = useCallback(
+    () =>
+      simulationInputSchema.safeParse({
+        ...form.getValues(),
 
-const conforto = useWatch({ control: form.control, name: 'preferences.priorities.conforto' })
+        useLiveFipe: isDemo ? false : form.getValues('useLiveFipe'),
+      }),
 
-const desempenho = useWatch({ control: form.control, name: 'preferences.priorities.desempenho' })
+    [form, isDemo],
+  )
 
-const manutencao = useWatch({ control: form.control, name: 'preferences.priorities.manutencao' })
+  const process = useCallback(async () => {
+    const current = ++runId.current
 
-useEffect(() => {
+    const parsed = buildInput()
 
-if (weightsCustomized) return
+    // Entrada inválida: a mensagem é definida ao sair da revisão (goNext).
 
-const clamp = (value: unknown) => Math.min(5, Math.max(1, Math.round(finiteOr(value, 3))))
+    if (!parsed.success) return
 
-form.setValue(
+    const catalog = await load(parsed.data.useLiveFipe ? 'live' : 'saved')
 
-'weights',
+    if (current !== runId.current || !catalog) return
 
-initialWeights(scenarioId, {
+    commitInput(parsed.data)
 
-economia: clamp(economia),
+    navigate('/resultado', { replace: true })
+  }, [buildInput, load, commitInput, navigate])
 
-conforto: clamp(conforto),
+  useEffect(() => {
+    if (stepIndex === PROCESSING_INDEX) void process()
 
-desempenho: clamp(desempenho),
+    return () => {
+      runId.current += 1
+    }
+  }, [stepIndex, process])
 
-manutencao: clamp(manutencao),
+  async function goNext() {
+    if (!step) return
 
-}),
+    const valid = await form.trigger(step.fields, { shouldFocus: true })
 
-)
+    setStepError(!valid)
 
-}, [scenarioId, economia, conforto, desempenho, manutencao, weightsCustomized, form])
+    if (!valid) return
 
+    setDraft(form.getValues() as SimulationInput)
 
+    if (stepIndex === REVIEW_INDEX && !buildInput().success) {
+      setValidationError(
+        'Alguns campos estão ausentes ou inválidos. Volte às etapas anteriores e confira os valores destacados.',
+      )
+    }
 
-useEffect(() => {
+    setStepIndex((index) => Math.min(index + 1, WIZARD_STEPS.length - 1))
+  }
 
-headingRef.current?.focus()
+  function goBack() {
+    setStepError(false)
 
-}, [stepIndex])
+    setDraft(form.getValues() as SimulationInput)
 
+    setStepIndex((index) => Math.max(index - 1, 0))
+  }
 
+  if (!step) return null
 
-const step = WIZARD_STEPS[stepIndex]
+  const isProcessing = stepIndex === PROCESSING_INDEX
 
+  const progressValue = Math.round(((stepIndex + 1) / WIZARD_STEPS.length) * 100)
 
+  return (
+    <div>
+      <PageTitle
+        title="Nova simulação"
 
-const buildInput = useCallback(
+        subtitle="Responda às etapas para ver opções compatíveis com os parâmetros desta simulação."
+      />
 
-() =>
+      <nav aria-label="Progresso da simulação" className="mb-6">
+        <p className="mb-2 text-sm font-semibold text-ink-800">
+          Etapa {stepIndex + 1} de {WIZARD_STEPS.length}: {step.title}
+        </p>
 
-simulationInputSchema.safeParse({
+        <div
+          role="progressbar"
 
-...form.getValues(),
+          aria-label="Progresso"
 
-useLiveFipe: isDemo ? false : form.getValues('useLiveFipe'),
+          aria-valuemin={0}
 
-}),
+          aria-valuemax={100}
 
-[form, isDemo],
+          aria-valuenow={progressValue}
 
-)
+          className="h-2 w-full overflow-hidden rounded-full bg-ink-200"
+        >
+          <div className="h-full bg-brand-700" style={{ width: `${progressValue}%` }} />
+        </div>
 
+        <ol className="mt-3 hidden flex-wrap gap-2 text-xs sm:flex">
+          {WIZARD_STEPS.map((item, index) => (
+            <li
+              key={item.id}
 
+              aria-current={index === stepIndex ? 'step' : undefined}
 
-const process = useCallback(async () => {
+              className={`rounded-full px-3 py-1 ${
+                index === stepIndex
+                  ? 'bg-brand-700 font-semibold text-white'
+                  : index < stepIndex
+                    ? 'bg-brand-100 text-brand-900'
+                    : 'bg-ink-100 text-ink-700'
+              }`}
+            >
+              {index + 1}. {item.title}
+              {index < stepIndex ? <span className="sr-only"> (concluída)</span> : null}
+            </li>
+          ))}
+        </ol>
+      </nav>
 
-const current = ++runId.current
+      <FormProvider {...form}>
+        <form
+          noValidate
 
-const parsed = buildInput()
+          onSubmit={(event) => {
+            event.preventDefault()
 
-// Entrada inválida: a mensagem é definida ao sair da revisão (goNext).
+            if (!isProcessing) void goNext()
+          }}
 
-if (!parsed.success) return
+          className="qc-card p-6"
+        >
+          <h2 ref={headingRef} tabIndex={-1} className="mb-5 text-xl font-bold focus:outline-none">
+            {step.title}
+          </h2>
 
-const catalog = await load(parsed.data.useLiveFipe ? 'live' : 'saved')
+          {stepError ? (
+            <div className="mb-5">
+              <Alert tone="bad">Revise os campos destacados antes de continuar.</Alert>
+            </div>
+          ) : null}
+          {step.id === 'objetivo' ? <StepObjective /> : null}
 
-if (current !== runId.current || !catalog) return
+          {step.id === 'financas' ? <StepFinance /> : null}
 
-commitInput(parsed.data)
+          {step.id === 'uso' ? <StepUsage /> : null}
 
-navigate('/resultado', { replace: true })
+          {step.id === 'preferencias' ? <StepPreferences /> : null}
 
-}, [buildInput, load, commitInput, navigate])
+          {step.id === 'pesos' ? <StepWeights /> : null}
 
+          {step.id === 'revisao' ? <StepReview /> : null}
 
+          {step.id === 'processamento' ? (
+            <StepProcessing
+              validationError={validationError}
 
-useEffect(() => {
+              onRetry={() => void process()}
 
-if (stepIndex === PROCESSING_INDEX) void process()
+              onBack={() => {
+                setStepIndex(validationError ? 0 : REVIEW_INDEX)
 
-return () => {
+                setValidationError(null)
+              }}
+            />
+          ) : null}
 
-runId.current += 1
+          {!isProcessing ? (
+            <div className="mt-8 flex flex-wrap justify-between gap-3">
+              <button
+                type="button"
 
-}
+                className="qc-btn-secondary"
 
-}, [stepIndex, process])
+                onClick={goBack}
 
+                disabled={stepIndex === 0}
+              >
+                Voltar
+              </button>
 
-
-async function goNext() {
-
-if (!step) return
-
-const valid = await form.trigger(step.fields, { shouldFocus: true })
-
-setStepError(!valid)
-
-if (!valid) return
-
-setDraft(form.getValues() as SimulationInput)
-
-if (stepIndex === REVIEW_INDEX && !buildInput().success) {
-
-setValidationError(
-
-'Alguns campos estão ausentes ou inválidos. Volte às etapas anteriores e confira os valores destacados.',
-
-)
-
-}
-
-setStepIndex((index) => Math.min(index + 1, WIZARD_STEPS.length - 1))
-
-}
-
-
-
-function goBack() {
-
-setStepError(false)
-
-setDraft(form.getValues() as SimulationInput)
-
-setStepIndex((index) => Math.max(index - 1, 0))
-
-}
-
-
-
-if (!step) return null
-
-const isProcessing = stepIndex === PROCESSING_INDEX
-
-const progressValue = Math.round(((stepIndex + 1) / WIZARD_STEPS.length) * 100)
-
-
-
-return (
-
-<div>
-
-<PageTitle
-
-title="Nova simulação"
-
-subtitle="Responda às etapas para ver opções compatíveis com os parâmetros desta simulação."
-
-/>
-
-
-
-<nav aria-label="Progresso da simulação" className="mb-6">
-
-<p className="mb-2 text-sm font-semibold text-ink-800">
-
-Etapa {stepIndex + 1} de {WIZARD_STEPS.length}: {step.title}
-
-</p>
-
-<div
-
-role="progressbar"
-
-aria-label="Progresso"
-
-aria-valuemin={0}
-
-aria-valuemax={100}
-
-aria-valuenow={progressValue}
-
-className="h-2 w-full overflow-hidden rounded-full bg-ink-200"
-
->
-
-<div className="h-full bg-brand-700" style={{ width: `${progressValue}%` }} />
-
-</div>
-
-<ol className="mt-3 hidden flex-wrap gap-2 text-xs sm:flex">
-
-{WIZARD_STEPS.map((item, index) => (
-
-<li
-
-key={item.id}
-
-aria-current={index === stepIndex ? 'step' : undefined}
-
-className={`rounded-full px-3 py-1 ${
-
-index === stepIndex
-
-? 'bg-brand-700 font-semibold text-white'
-
-: index < stepIndex
-
-? 'bg-brand-100 text-brand-900'
-
-: 'bg-ink-100 text-ink-700'
-
-}`}
-
->
-
-{index + 1}. {item.title}
-
-{index < stepIndex ? <span className="sr-only"> (concluída)</span> : null}
-
-</li>
-
-))}
-
-</ol>
-
-</nav>
-
-
-
-<FormProvider {...form}>
-
-<form
-
-noValidate
-
-onSubmit={(event) => {
-
-event.preventDefault()
-
-if (!isProcessing) void goNext()
-
-}}
-
-className="qc-card p-6"
-
->
-
-<h2 ref={headingRef} tabIndex={-1} className="mb-5 text-xl font-bold focus:outline-none">
-
-{step.title}
-
-</h2>
-
-
-
-{stepError ? (
-
-<div className="mb-5">
-
-<Alert tone="bad">Revise os campos destacados antes de continuar.</Alert>
-
-</div>
-
-) : null}
-{step.id === 'objetivo' ? <StepObjective /> : null}
-
-{step.id === 'financas' ? <StepFinance /> : null}
-
-{step.id === 'uso' ? <StepUsage /> : null}
-
-{step.id === 'preferencias' ? <StepPreferences /> : null}
-
-{step.id === 'pesos' ? <StepWeights /> : null}
-
-{step.id === 'revisao' ? <StepReview /> : null}
-
-{step.id === 'processamento' ? (
-
-<StepProcessing
-
-validationError={validationError}
-
-onRetry={() => void process()}
-
-onBack={() => {
-
-setStepIndex(validationError ? 0 : REVIEW_INDEX)
-
-setValidationError(null)
-
-}}
-
-/>
-
-) : null}
-
-
-
-{!isProcessing ? (
-
-<div className="mt-8 flex flex-wrap justify-between gap-3">
-
-<button
-
-type="button"
-
-className="qc-btn-secondary"
-
-onClick={goBack}
-
-disabled={stepIndex === 0}
-
->
-
-Voltar
-
-</button>
-
-<button type="submit" className="qc-btn-primary">
-
-{stepIndex === REVIEW_INDEX ? 'Calcular opções' : 'Continuar'}
-
-</button>
-
-</div>
-
-) : null}
-
-</form>
-
-</FormProvider>
-
-</div>
-
-)
-
+              <button type="submit" className="qc-btn-primary">
+                {stepIndex === REVIEW_INDEX ? 'Calcular opções' : 'Continuar'}
+              </button>
+            </div>
+          ) : null}
+        </form>
+      </FormProvider>
+    </div>
+  )
 }

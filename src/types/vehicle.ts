@@ -8,25 +8,15 @@ export type InsuranceCategory = 'baixo' | 'medio' | 'alto' | 'muito_alto'
 
 export type ConsumptionUnit = 'km/l' | 'km/kWh'
 
-
-
 /** Origem de um valor exibido ao usuário (rótulo da interface). Ver `DataOrigin` em `types/provenance.ts` para a classe da fonte. */
 
 export type ValueOrigin =
-
-| 'fipe_online'
-
-| 'fipe_referencia_salva'
-
-| 'estimativa_demonstrativa'
-
-| 'premissa_configuravel'
-
-| 'informado_usuario'
-
-| 'calculado'
-
-
+  | 'fipe_online'
+  | 'fipe_referencia_salva'
+  | 'estimativa_demonstrativa'
+  | 'premissa_configuravel'
+  | 'informado_usuario'
+  | 'calculado'
 
 /**
 
@@ -37,160 +27,145 @@ export type ValueOrigin =
 */
 
 export interface SupplementRecord {
+  fipeCode: string
 
-fipeCode: string
+  fipeBrandId: string
 
-fipeBrandId: string
+  fipeModelId: string
 
-fipeModelId: string
+  fipeYearId: string
 
-fipeYearId: string
+  transmission: Transmission | null
 
-transmission: Transmission | null
+  urbanConsumption: number | null
 
-urbanConsumption: number | null
+  highwayConsumption: number | null
 
-highwayConsumption: number | null
+  consumptionUnit: ConsumptionUnit
 
-consumptionUnit: ConsumptionUnit
+  maintenanceAnnualBRL: number | null
 
-maintenanceAnnualBRL: number | null
+  insuranceCategory: InsuranceCategory | null
 
-insuranceCategory: InsuranceCategory | null
+  depreciationAnnualPct: number | null
 
-depreciationAnnualPct: number | null
+  category: VehicleCategory | null
 
-category: VehicleCategory | null
+  trunkLiters: number | null
 
-trunkLiters: number | null
-
-seats: number | null
-
+  seats: number | null
 }
-
-
 
 /** Preço de referência já adaptado a partir da resposta da API FIPE. */
 
 export interface FipePriceRecord {
+  fipeCode: string
 
-fipeCode: string
+  brand: string
 
-brand: string
+  model: string
 
-model: string
+  modelYear: number
 
-modelYear: number
+  fuel: Fuel | null
 
-fuel: Fuel | null
+  fuelLabel: string
 
-fuelLabel: string
+  priceBRL: number
 
-priceBRL: number
+  /** Texto original da API, ex.: "novembro de 2026". */
 
-/** Texto original da API, ex.: "novembro de 2026". */
+  referenceMonthLabel: string
 
-referenceMonthLabel: string
+  /** Normalizado como YYYY-MM quando possível. */
 
-/** Normalizado como YYYY-MM quando possível. */
-
-referenceMonth: string | null
-
+  referenceMonth: string | null
 }
 
-
-
 export type PriceSource = 'fipe_online' | 'fipe_referencia_salva'
-
-
 
 /** Veículo consolidado (FIPE + complemento). `null` significa "Informação não disponível". */
 
 export interface Vehicle {
+  /** `${fipeCode}:${yearId}` */
 
-/** `${fipeCode}:${yearId}` */
+  id: string
 
-id: string
+  fipeCode: string
 
-fipeCode: string
+  fipeBrandId: string
 
-fipeBrandId: string
+  fipeModelId: string
 
-fipeModelId: string
+  fipeYearId: string
 
-fipeYearId: string
+  brand: string
 
-brand: string
+  model: string
 
-model: string
+  modelYear: number
 
-modelYear: number
+  fuel: Fuel | null
 
-fuel: Fuel | null
+  priceBRL: number | null
 
-priceBRL: number | null
+  priceSource: PriceSource
 
-priceSource: PriceSource
+  referenceMonth: string | null
 
-referenceMonth: string | null
+  referenceMonthLabel: string | null
 
-referenceMonthLabel: string | null
+  transmission: Transmission | null
 
-transmission: Transmission | null
+  urbanConsumption: number | null
 
-urbanConsumption: number | null
+  highwayConsumption: number | null
 
-highwayConsumption: number | null
+  consumptionUnit: ConsumptionUnit
 
-consumptionUnit: ConsumptionUnit
+  maintenanceAnnualBRL: number | null
 
-maintenanceAnnualBRL: number | null
+  insuranceCategory: InsuranceCategory | null
 
-insuranceCategory: InsuranceCategory | null
+  depreciationAnnualPct: number | null
 
-depreciationAnnualPct: number | null
+  category: VehicleCategory | null
 
-category: VehicleCategory | null
+  trunkLiters: number | null
 
-trunkLiters: number | null
+  seats: number | null
 
-seats: number | null
+  supplementUpdatedAt: string | null
 
-supplementUpdatedAt: string | null
-
-hasSupplement: boolean
-
+  hasSupplement: boolean
 }
 
-
-
 export interface VehicleCatalog {
+  vehicles: Vehicle[]
 
-vehicles: Vehicle[]
+  /** Mês de referência FIPE predominante (YYYY-MM) e seu rótulo. */
 
-/** Mês de referência FIPE predominante (YYYY-MM) e seu rótulo. */
+  referenceMonth: string | null
 
-referenceMonth: string | null
+  referenceMonthLabel: string | null
 
-referenceMonthLabel: string | null
+  sourceLabel: string
 
-sourceLabel: string
+  fetchedAt: string
 
-fetchedAt: string
+  /** Identifica versão do catálogo para reprodutibilidade. */
 
-/** Identifica versão do catálogo para reprodutibilidade. */
+  version: string
 
-version: string
+  warnings: string[]
 
-warnings: string[]
+  /** Quantos preços vieram da FIPE online / referência salva. */
 
-/** Quantos preços vieram da FIPE online / referência salva. */
+  onlineCount: number
 
-onlineCount: number
+  snapshotCount: number
 
-snapshotCount: number
-
-/**
+  /**
 
 * online: todos os preços consultados na FIPE; parcial: parte consultada, parte salva;
 
@@ -198,36 +173,27 @@ snapshotCount: number
 
 */
 
-liveStatus: 'online' | 'parcial' | 'referencia_salva'
+  liveStatus: 'online' | 'parcial' | 'referencia_salva'
 
-/** Houve falha na consulta online que justifica oferecer "Tentar novamente". */
+  /** Houve falha na consulta online que justifica oferecer "Tentar novamente". */
 
-retryable: boolean
-
+  retryable: boolean
 }
-
-
 
 export interface LoadCatalogOptions {
+  signal?: AbortSignal
 
-signal?: AbortSignal
+  forceRefresh?: boolean
 
-forceRefresh?: boolean
-
-onProgress?: (done: number, total: number) => void
-
+  onProgress?: (done: number, total: number) => void
 }
-
-
 
 /** Contrato para fontes de dados de veículos: a FIPE pode ser substituída no futuro. */
 
 export interface VehicleDataProvider {
+  readonly id: string
 
-readonly id: string
+  readonly label: string
 
-readonly label: string
-
-loadCatalog(options?: LoadCatalogOptions): Promise<VehicleCatalog>
-
+  loadCatalog(options?: LoadCatalogOptions): Promise<VehicleCatalog>
 }

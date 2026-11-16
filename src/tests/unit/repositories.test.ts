@@ -12,190 +12,144 @@ import { REFERENCE_YEAR, loadCatalogVehicles, makeInput } from '../fixtures/fact
 
 import type { VehicleCatalog } from '../../types/vehicle'
 
-
-
 function makeDraft(title = 'Minha simulação') {
+  const input = makeInput({ objective: { title } })
 
-const input = makeInput({ objective: { title } })
+  const vehicles = loadCatalogVehicles()
 
-const vehicles = loadCatalogVehicles()
+  const result = runDecision(input, vehicles, { referenceYear: REFERENCE_YEAR })
 
-const result = runDecision(input, vehicles, { referenceYear: REFERENCE_YEAR })
+  const catalog = {
+    vehicles,
 
-const catalog = {
+    referenceMonth: '2026-11',
 
-vehicles,
+    referenceMonthLabel: 'novembro de 2026',
 
-referenceMonth: '2026-11',
+    version: 'test-catalog',
+  } as VehicleCatalog
 
-referenceMonthLabel: 'novembro de 2026',
-
-version: 'test-catalog',
-
-} as VehicleCatalog
-
-return buildSimulationDraft(input, result, catalog)
-
+  return buildSimulationDraft(input, result, catalog)
 }
 
-
-
 describe('repositórios em memória (regra equivalente à RLS)', () => {
+  it('exige consentimento para salvar o histórico', async () => {
+    const db = new MemoryDatabase()
 
-it('exige consentimento para salvar o histórico', async () => {
+    const repos = db.repositoriesFor('user-a')
 
-const db = new MemoryDatabase()
+    await expect(repos.simulations.save(makeDraft())).rejects.toBeInstanceOf(ConsentRequiredError)
 
-const repos = db.repositoriesFor('user-a')
+    expect(await repos.simulations.list()).toHaveLength(0)
 
-await expect(repos.simulations.save(makeDraft())).rejects.toBeInstanceOf(ConsentRequiredError)
+    await repos.preferences.update({ persistHistoryConsent: true })
 
-expect(await repos.simulations.list()).toHaveLength(0)
+    const saved = await repos.simulations.save(makeDraft())
 
+    expect(saved.title).toBe('Minha simulação')
 
+    expect(await repos.simulations.list()).toHaveLength(1)
+  })
 
-await repos.preferences.update({ persistHistoryConsent: true })
+  it('guarda o ranking completo, o grupo recomendado e a versão do catálogo', async () => {
+    const db = new MemoryDatabase()
 
-const saved = await repos.simulations.save(makeDraft())
+    const repos = db.repositoriesFor('user-a')
 
-expect(saved.title).toBe('Minha simulação')
+    await repos.preferences.update({ persistHistoryConsent: true })
 
-expect(await repos.simulations.list()).toHaveLength(1)
+    const saved = await repos.simulations.save(makeDraft())
 
-})
+    expect(saved.catalogVersion).toBe('test-catalog')
 
+    expect(saved.results.length).toBeGreaterThan(3)
 
+    const group = saved.results.filter((item) => item.inRecommendedGroup)
 
-it('guarda o ranking completo, o grupo recomendado e a versão do catálogo', async () => {
+    expect(group.length).toBeGreaterThanOrEqual(3)
 
-const db = new MemoryDatabase()
+    expect(group.length).toBeLessThanOrEqual(5)
+  })
 
-const repos = db.repositoriesFor('user-a')
+  it('só o dono lê, lista e exclui suas simulações (leitura horizontal bloqueada)', async () => {
+    const db = new MemoryDatabase()
 
-await repos.preferences.update({ persistHistoryConsent: true })
+    const alice = db.repositoriesFor('user-a')
 
-const saved = await repos.simulations.save(makeDraft())
+    const bob = db.repositoriesFor('user-b')
 
-expect(saved.catalogVersion).toBe('test-catalog')
+    await alice.preferences.update({ persistHistoryConsent: true })
 
-expect(saved.results.length).toBeGreaterThan(3)
+    await bob.preferences.update({ persistHistoryConsent: true })
 
-const group = saved.results.filter((item) => item.inRecommendedGroup)
+    const aliceSim = await alice.simulations.save(makeDraft('Da Alice'))
 
-expect(group.length).toBeGreaterThanOrEqual(3)
+    await bob.simulations.save(makeDraft('Do Bob'))
 
-expect(group.length).toBeLessThanOrEqual(5)
+    expect((await alice.simulations.list()).map((item) => item.title)).toEqual(['Da Alice'])
 
-})
+    expect((await bob.simulations.list()).map((item) => item.title)).toEqual(['Do Bob'])
 
+    // Bob tenta abrir e excluir a simulação da Alice pelo id
 
+    expect(await bob.simulations.get(aliceSim.id)).toBeNull()
 
-it('só o dono lê, lista e exclui suas simulações (leitura horizontal bloqueada)', async () => {
+    await bob.simulations.remove(aliceSim.id)
 
-const db = new MemoryDatabase()
+    expect(await alice.simulations.get(aliceSim.id)).not.toBeNull()
 
-const alice = db.repositoriesFor('user-a')
+    // removeAll do Bob não afeta a Alice
 
-const bob = db.repositoriesFor('user-b')
+    await bob.simulations.removeAll()
 
-await alice.preferences.update({ persistHistoryConsent: true })
+    expect(await alice.simulations.list()).toHaveLength(1)
+  })
 
-await bob.preferences.update({ persistHistoryConsent: true })
+  it('não permite alterar o registro salvo por fora (cópia defensiva)', async () => {
+    const db = new MemoryDatabase()
 
+    const repos = db.repositoriesFor('user-a')
 
+    await repos.preferences.update({ persistHistoryConsent: true })
 
-const aliceSim = await alice.simulations.save(makeDraft('Da Alice'))
+    const saved = await repos.simulations.save(makeDraft())
 
-await bob.simulations.save(makeDraft('Do Bob'))
+    saved.title = 'Alterado fora'
 
+    const reloaded = await repos.simulations.get(saved.id)
 
+    expect(reloaded?.title).toBe('Minha simulação')
+  })
 
-expect((await alice.simulations.list()).map((item) => item.title)).toEqual(['Da Alice'])
+  it('exclusão de conta remove perfil, preferências e histórico do usuário', async () => {
+    const db = new MemoryDatabase()
 
-expect((await bob.simulations.list()).map((item) => item.title)).toEqual(['Do Bob'])
+    const repos = db.repositoriesFor('user-a')
 
+    await repos.profile.upsert({ displayName: 'A', privacyAcceptedAt: new Date().toISOString() })
 
+    await repos.preferences.update({ persistHistoryConsent: true })
 
-// Bob tenta abrir e excluir a simulação da Alice pelo id
+    await repos.simulations.save(makeDraft())
 
-expect(await bob.simulations.get(aliceSim.id)).toBeNull()
+    await repos.profile.deleteAccount()
 
-await bob.simulations.remove(aliceSim.id)
+    expect(await repos.profile.get()).toBeNull()
 
-expect(await alice.simulations.get(aliceSim.id)).not.toBeNull()
+    expect(await repos.simulations.list()).toHaveLength(0)
 
+    expect((await repos.preferences.get()).persistHistoryConsent).toBe(false)
+  })
 
+  it('usa ids em formato UUID, como o banco real', async () => {
+    const db = new MemoryDatabase()
 
-// removeAll do Bob não afeta a Alice
+    const repos = db.repositoriesFor('user-a')
 
-await bob.simulations.removeAll()
+    await repos.preferences.update({ persistHistoryConsent: true })
 
-expect(await alice.simulations.list()).toHaveLength(1)
+    const saved = await repos.simulations.save(makeDraft())
 
-})
-
-
-
-it('não permite alterar o registro salvo por fora (cópia defensiva)', async () => {
-
-const db = new MemoryDatabase()
-
-const repos = db.repositoriesFor('user-a')
-
-await repos.preferences.update({ persistHistoryConsent: true })
-
-const saved = await repos.simulations.save(makeDraft())
-
-saved.title = 'Alterado fora'
-
-const reloaded = await repos.simulations.get(saved.id)
-
-expect(reloaded?.title).toBe('Minha simulação')
-
-})
-
-
-
-it('exclusão de conta remove perfil, preferências e histórico do usuário', async () => {
-
-const db = new MemoryDatabase()
-
-const repos = db.repositoriesFor('user-a')
-
-await repos.profile.upsert({ displayName: 'A', privacyAcceptedAt: new Date().toISOString() })
-
-await repos.preferences.update({ persistHistoryConsent: true })
-
-await repos.simulations.save(makeDraft())
-
-
-
-await repos.profile.deleteAccount()
-
-
-
-expect(await repos.profile.get()).toBeNull()
-
-expect(await repos.simulations.list()).toHaveLength(0)
-
-expect((await repos.preferences.get()).persistHistoryConsent).toBe(false)
-
-})
-
-
-
-it('usa ids em formato UUID, como o banco real', async () => {
-
-const db = new MemoryDatabase()
-
-const repos = db.repositoriesFor('user-a')
-
-await repos.preferences.update({ persistHistoryConsent: true })
-
-const saved = await repos.simulations.save(makeDraft())
-
-expect(saved.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/)
-
-})
-
+    expect(saved.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/)
+  })
 })

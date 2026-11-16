@@ -1,61 +1,49 @@
 {
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
 
-"compilerOptions": {
+    "target": "ES2022",
 
-"tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
+    "useDefineForClassFields": true,
 
-"target": "ES2022",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
 
-"useDefineForClassFields": true,
+    "module": "ESNext",
 
-"lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "types": ["vite/client", "vitest/globals", "@testing-library/jest-dom"],
 
-"module": "ESNext",
+    "skipLibCheck": true,
 
-"types": ["vite/client", "vitest/globals", "@testing-library/jest-dom"],
+    "moduleResolution": "bundler",
 
-"skipLibCheck": true,
+    "allowImportingTsExtensions": true,
 
+    "verbatimModuleSyntax": true,
 
+    "moduleDetection": "force",
 
-"moduleResolution": "bundler",
+    "noEmit": true,
 
-"allowImportingTsExtensions": true,
+    "jsx": "react-jsx",
 
-"verbatimModuleSyntax": true,
+    "strict": true,
 
-"moduleDetection": "force",
+    "noUnusedLocals": true,
 
-"noEmit": true,
+    "noUnusedParameters": true,
 
-"jsx": "react-jsx",
+    "noFallthroughCasesInSwitch": true,
 
+    "noUncheckedIndexedAccess": true,
 
+    "noImplicitOverride": true,
 
-"strict": true,
+    "exactOptionalPropertyTypes": false,
 
-"noUnusedLocals": true,
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
 
-"noUnusedParameters": true,
-
-"noFallthroughCasesInSwitch": true,
-
-"noUncheckedIndexedAccess": true,
-
-"noImplicitOverride": true,
-
-"exactOptionalPropertyTypes": false,
-
-
-
-"paths": {
-
-"@/*": ["./src/*"]
-
-}
-
-},
-
-"include": ["src"]
-
+  "include": ["src"]
 }

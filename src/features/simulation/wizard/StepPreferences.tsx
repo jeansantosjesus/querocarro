@@ -10,382 +10,260 @@ import { NumberField } from './NumberField'
 
 import { brandList } from './numeric'
 
-
-
 const FUEL_LABELS: Record<string, string> = {
+  indiferente: 'Indiferente',
 
-indiferente: 'Indiferente',
+  flex: 'Flex',
 
-flex: 'Flex',
+  gasolina: 'Gasolina',
 
-gasolina: 'Gasolina',
+  etanol: 'Etanol',
 
-etanol: 'Etanol',
+  diesel: 'Diesel',
 
-diesel: 'Diesel',
+  hibrido: 'Híbrido',
 
-hibrido: 'Híbrido',
-
-eletrico: 'Elétrico',
-
+  eletrico: 'Elétrico',
 }
 
-
-
 const PRIORITY_FIELDS = [
+  {
+    key: 'economia',
 
-{
+    label: 'Folga na renda',
 
-key: 'economia',
+    hint: 'Aumenta a importância da situação financeira: orçamento, capacidade e reserva.',
+  },
 
-label: 'Folga na renda',
+  {
+    key: 'conforto',
 
-hint: 'Aumenta a importância da situação financeira: orçamento, capacidade e reserva.',
+    label: 'Conforto e espaço',
 
-},
+    hint: 'Aumenta a importância da aderência ao uso.',
+  },
 
-{
+  {
+    key: 'manutencao',
 
-key: 'conforto',
+    label: 'Custo total (TCO)',
 
-label: 'Conforto e espaço',
+    hint: 'Aumenta a importância do custo total no horizonte: parcela, juros, impostos, seguro, energia, manutenção e depreciação.',
+  },
 
-hint: 'Aumenta a importância da aderência ao uso.',
+  {
+    key: 'desempenho',
 
-},
+    label: 'Desempenho e gosto pessoal',
 
-{
-
-key: 'manutencao',
-
-label: 'Custo total (TCO)',
-
-hint: 'Aumenta a importância do custo total no horizonte: parcela, juros, impostos, seguro, energia, manutenção e depreciação.',
-
-},
-
-{
-
-key: 'desempenho',
-
-label: 'Desempenho e gosto pessoal',
-
-hint: 'Aumenta a importância das preferências informadas.',
-
-},
-
+    hint: 'Aumenta a importância das preferências informadas.',
+  },
 ] as const
 
-
-
 export function StepPreferences() {
+  const {
+    register,
+
+    watch,
+
+    formState: { errors },
+  } = useFormContext<SimulationInput>()
+
+  const err = errors.preferences
+
+  const fuel = watch('preferences.fuel')
+
+  const transmission = watch('preferences.transmission')
+
+  const condition = watch('objective.condition')
 
-const {
+  return (
+    <div className="space-y-8">
+      <fieldset className="space-y-4">
+        <legend className="text-lg font-bold">Combustível e câmbio</legend>
 
-register,
+        <p className="text-sm text-ink-700">
+          Por padrão, preferências apenas <strong>influenciam</strong> a pontuação. Marque
+          “obrigatório” para excluir as opções que não atendem.
+        </p>
 
-watch,
+        <div className="grid gap-6 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Field label="Combustível" error={err?.fuel?.message}>
+              {(props) => (
+                <select {...props} className="qc-input" {...register('preferences.fuel')}>
+                  {Object.entries(FUEL_LABELS).map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </Field>
 
-formState: { errors },
+            {fuel !== 'indiferente' ? (
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
 
-} = useFormContext<SimulationInput>()
+                  className="size-5"
 
-const err = errors.preferences
+                  {...register('preferences.requireFuel')}
+                />
+                Obrigatório
+              </label>
+            ) : null}
+          </div>
 
-const fuel = watch('preferences.fuel')
+          <div className="space-y-2">
+            <Field label="Câmbio" error={err?.transmission?.message}>
+              {(props) => (
+                <select {...props} className="qc-input" {...register('preferences.transmission')}>
+                  <option value="indiferente">Indiferente</option>
 
-const transmission = watch('preferences.transmission')
+                  <option value="manual">Manual</option>
 
-const condition = watch('objective.condition')
+                  <option value="automatico">Automático</option>
+                </select>
+              )}
+            </Field>
 
+            {transmission !== 'indiferente' ? (
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
 
+                  className="size-5"
 
-return (
+                  {...register('preferences.requireTransmission')}
+                />
+                Obrigatório
+              </label>
+            ) : null}
+          </div>
+        </div>
 
-<div className="space-y-8">
+        {condition !== 'indiferente' ? (
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
 
-<fieldset className="space-y-4">
+              className="size-5"
 
-<legend className="text-lg font-bold">Combustível e câmbio</legend>
+              {...register('preferences.requireCondition')}
+            />
+            Tratar a condição escolhida ({condition === 'novo' ? 'novos' : 'usados'}) como
+            obrigatória
+          </label>
+        ) : null}
+      </fieldset>
 
-<p className="text-sm text-ink-700">
+      <fieldset className="space-y-4">
+        <legend className="text-lg font-bold">Ano do modelo</legend>
 
-Por padrão, preferências apenas <strong>influenciam</strong> a pontuação. Marque
+        <div className="grid gap-6 sm:grid-cols-2">
+          <NumberField
+            name="preferences.yearMin"
 
-“obrigatório” para excluir as opções que não atendem.
+            label="Ano mínimo (opcional)"
 
-</p>
+            optional
 
-<div className="grid gap-6 sm:grid-cols-2">
+            step="1"
 
-<div className="space-y-2">
+            min={INPUT_LIMITS.yearRange.min}
 
-<Field label="Combustível" error={err?.fuel?.message}>
+            max={INPUT_LIMITS.yearRange.max}
+          />
 
-{(props) => (
+          <NumberField
+            name="preferences.yearMax"
 
-<select {...props} className="qc-input" {...register('preferences.fuel')}>
+            label="Ano máximo (opcional)"
 
-{Object.entries(FUEL_LABELS).map(([value, label]) => (
+            optional
 
-<option key={value} value={value}>
+            step="1"
 
-{label}
+            min={INPUT_LIMITS.yearRange.min}
 
-</option>
+            max={INPUT_LIMITS.yearRange.max}
+          />
+        </div>
 
-))}
+        {err?.yearMin?.message ? <p className="qc-error">{err.yearMin.message}</p> : null}
+      </fieldset>
 
-</select>
+      <fieldset className="space-y-4">
+        <legend className="text-lg font-bold">Marcas</legend>
 
-)}
+        <div className="grid gap-6 sm:grid-cols-2">
+          <Field
+            label="Marcas desejadas"
 
-</Field>
+            hint="Separe por vírgula. Ex.: Fiat, Volkswagen. Apenas aumenta a pontuação."
 
-{fuel !== 'indiferente' ? (
+            error={(err?.wantedBrands as { message?: string } | undefined)?.message}
+          >
+            {(props) => (
+              <input
+                {...props}
 
-<label className="flex items-center gap-2 text-sm">
+                className="qc-input"
 
-<input
+                {...register('preferences.wantedBrands', brandList)}
+              />
+            )}
+          </Field>
 
-type="checkbox"
+          <Field
+            label="Marcas que prefere evitar"
 
-className="size-5"
+            hint="Separe por vírgula. Essas marcas são removidas da análise."
 
-{...register('preferences.requireFuel')}
+            error={(err?.avoidedBrands as { message?: string } | undefined)?.message}
+          >
+            {(props) => (
+              <input
+                {...props}
 
-/>
+                className="qc-input"
 
-Obrigatório
+                {...register('preferences.avoidedBrands', brandList)}
+              />
+            )}
+          </Field>
+        </div>
+      </fieldset>
 
-</label>
+      <fieldset className="space-y-4">
+        <legend className="text-lg font-bold">O que é mais importante para você?</legend>
 
-) : null}
+        <p className="text-sm text-ink-700">
+          De 1 (menos) a 5 (mais). Esses controles ajustam os pesos sugeridos; você poderá
+          refiná-los na próxima etapa.
+        </p>
 
-</div>
+        <div className="grid gap-6 sm:grid-cols-2">
+          {PRIORITY_FIELDS.map((priority) => (
+            <NumberField
+              key={priority.key}
 
-<div className="space-y-2">
+              name={`preferences.priorities.${priority.key}`}
 
-<Field label="Câmbio" error={err?.transmission?.message}>
+              label={`${priority.label} (1 a 5)`}
 
-{(props) => (
+              hint={priority.hint}
 
-<select {...props} className="qc-input" {...register('preferences.transmission')}>
+              step="1"
 
-<option value="indiferente">Indiferente</option>
+              min={1}
 
-<option value="manual">Manual</option>
-
-<option value="automatico">Automático</option>
-
-</select>
-
-)}
-
-</Field>
-
-{transmission !== 'indiferente' ? (
-
-<label className="flex items-center gap-2 text-sm">
-
-<input
-
-type="checkbox"
-
-className="size-5"
-
-{...register('preferences.requireTransmission')}
-
-/>
-
-Obrigatório
-
-</label>
-
-) : null}
-
-</div>
-
-</div>
-
-{condition !== 'indiferente' ? (
-
-<label className="flex items-center gap-2 text-sm">
-
-<input
-
-type="checkbox"
-
-className="size-5"
-
-{...register('preferences.requireCondition')}
-
-/>
-
-Tratar a condição escolhida ({condition === 'novo' ? 'novos' : 'usados'}) como
-
-obrigatória
-
-</label>
-
-) : null}
-
-</fieldset>
-
-
-
-<fieldset className="space-y-4">
-
-<legend className="text-lg font-bold">Ano do modelo</legend>
-
-<div className="grid gap-6 sm:grid-cols-2">
-
-<NumberField
-
-name="preferences.yearMin"
-
-label="Ano mínimo (opcional)"
-
-optional
-
-step="1"
-
-min={INPUT_LIMITS.yearRange.min}
-
-max={INPUT_LIMITS.yearRange.max}
-
-/>
-
-<NumberField
-
-name="preferences.yearMax"
-
-label="Ano máximo (opcional)"
-
-optional
-
-step="1"
-
-min={INPUT_LIMITS.yearRange.min}
-
-max={INPUT_LIMITS.yearRange.max}
-
-/>
-
-</div>
-
-{err?.yearMin?.message ? <p className="qc-error">{err.yearMin.message}</p> : null}
-
-</fieldset>
-
-
-
-<fieldset className="space-y-4">
-
-<legend className="text-lg font-bold">Marcas</legend>
-
-<div className="grid gap-6 sm:grid-cols-2">
-
-<Field
-
-label="Marcas desejadas"
-
-hint="Separe por vírgula. Ex.: Fiat, Volkswagen. Apenas aumenta a pontuação."
-
-error={(err?.wantedBrands as { message?: string } | undefined)?.message}
-
->
-
-{(props) => (
-
-<input
-
-{...props}
-
-className="qc-input"
-
-{...register('preferences.wantedBrands', brandList)}
-
-/>
-
-)}
-
-</Field>
-
-<Field
-
-label="Marcas que prefere evitar"
-
-hint="Separe por vírgula. Essas marcas são removidas da análise."
-
-error={(err?.avoidedBrands as { message?: string } | undefined)?.message}
-
->
-
-{(props) => (
-
-<input
-
-{...props}
-
-className="qc-input"
-
-{...register('preferences.avoidedBrands', brandList)}
-
-/>
-
-)}
-
-</Field>
-
-</div>
-
-</fieldset>
-
-
-
-<fieldset className="space-y-4">
-
-<legend className="text-lg font-bold">O que é mais importante para você?</legend>
-
-<p className="text-sm text-ink-700">
-
-De 1 (menos) a 5 (mais). Esses controles ajustam os pesos sugeridos; você poderá
-
-refiná-los na próxima etapa.
-
-</p>
-
-<div className="grid gap-6 sm:grid-cols-2">
-
-{PRIORITY_FIELDS.map((priority) => (
-
-<NumberField
-
-key={priority.key}
-
-name={`preferences.priorities.${priority.key}`}
-
-label={`${priority.label} (1 a 5)`}
-
-hint={priority.hint}
-
-step="1"
-
-min={1}
-
-max={5}
-
-/>
-
-))}
-
-</div>
-
-</fieldset>
-
-</div>
-
-)
-
+              max={5}
+            />
+          ))}
+        </div>
+      </fieldset>
+    </div>
+  )
 }

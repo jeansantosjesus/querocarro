@@ -12,310 +12,228 @@ import type { VehicleCatalog, VehicleDataProvider } from '../../types/vehicle'
 
 import { renderApp } from '../fixtures/renderApp'
 
-
-
 vi.setConfig({ testTimeout: 60_000 })
 
-
-
 beforeEach(() => {
+  window.sessionStorage.clear()
 
-window.sessionStorage.clear()
-
-window.localStorage.clear()
-
+  window.localStorage.clear()
 })
-
-
 
 type App = Awaited<ReturnType<typeof renderApp>>
 
-
-
 async function startDemoUntilProcessing(app: App) {
+  const { user } = app
 
-const { user } = app
+  await user.click(await screen.findByRole('button', { name: /Experimentar a demonstração/ }))
 
-await user.click(await screen.findByRole('button', { name: /Experimentar a demonstração/ }))
+  await user.click(await screen.findByRole('button', { name: /Começar com dados fictícios/ }))
 
-await user.click(await screen.findByRole('button', { name: /Começar com dados fictícios/ }))
+  await screen.findByRole('heading', { level: 2, name: 'Objetivo' })
 
-await screen.findByRole('heading', { level: 2, name: 'Objetivo' })
+  for (let i = 0; i < 5; i += 1) await user.click(screen.getByRole('button', { name: 'Continuar' }))
 
-for (let i = 0; i < 5; i += 1) await user.click(screen.getByRole('button', { name: 'Continuar' }))
-
-await user.click(screen.getByRole('button', { name: 'Calcular opções' }))
-
+  await user.click(screen.getByRole('button', { name: 'Calcular opções' }))
 }
-
-
 
 function failingThenOk(error: FipeError): { factory: ProviderFactory; calls: CatalogSource[] } {
+  const calls: CatalogSource[] = []
 
-const calls: CatalogSource[] = []
+  let attempt = 0
 
-let attempt = 0
+  const factory: ProviderFactory = (source) => {
+    calls.push(source)
 
-const factory: ProviderFactory = (source) => {
+    attempt += 1
 
-calls.push(source)
+    const provider: VehicleDataProvider =
+      attempt === 1
+        ? {
+            id: 'falha',
 
-attempt += 1
+            label: 'Falha simulada',
 
-const provider: VehicleDataProvider =
+            loadCatalog: () => Promise.reject(error),
+          }
+        : new MockVehicleDataProvider()
 
-attempt === 1
+    return provider
+  }
 
-? {
-
-id: 'falha',
-
-label: 'Falha simulada',
-
-loadCatalog: () => Promise.reject(error),
-
+  return { factory, calls }
 }
-
-: new MockVehicleDataProvider()
-
-return provider
-
-}
-
-return { factory, calls }
-
-}
-
-
 
 describe('falhas da API FIPE', () => {
+  it('limite de consultas (HTTP 429): mensagem amigável e nova tentativa', async () => {
+    const { factory } = failingThenOk(new FipeError('rate_limit', 'HTTP 429', { status: 429 }))
 
-it('limite de consultas (HTTP 429): mensagem amigável e nova tentativa', async () => {
+    const app = await renderApp({ route: '/', providerFactory: factory })
 
-const { factory } = failingThenOk(new FipeError('rate_limit', 'HTTP 429', { status: 429 }))
+    await startDemoUntilProcessing(app)
 
-const app = await renderApp({ route: '/', providerFactory: factory })
+    expect(
+      await screen.findByText(/limite de consultas à tabela FIPE foi atingido/i),
+    ).toBeInTheDocument()
 
-await startDemoUntilProcessing(app)
+    expect(screen.queryByText(/FIPE:rate_limit/)).not.toBeInTheDocument() // sem detalhes técnicos
 
+    await app.user.click(screen.getByRole('button', { name: 'Tentar novamente' }))
 
+    await screen.findByRole(
+      'heading',
 
-expect(
+      { level: 2, name: /Grupo de opções compatíveis/ },
 
-await screen.findByText(/limite de consultas à tabela FIPE foi atingido/i),
+      { timeout: 15_000 },
+    )
+  })
 
-).toBeInTheDocument()
+  it.each([
+    ['network', /Não foi possível conectar à tabela FIPE/],
 
-expect(screen.queryByText(/FIPE:rate_limit/)).not.toBeInTheDocument() // sem detalhes técnicos
+    ['timeout', /demorou mais que o esperado/],
 
+    ['invalid_response', /formato inesperado/],
+  ] as const)('erro %s mostra mensagem específica e permite voltar', async (kind, message) => {
+    const { factory } = failingThenOk(new FipeError(kind, 'detalhe interno'))
 
+    const app = await renderApp({ route: '/', providerFactory: factory })
 
-await app.user.click(screen.getByRole('button', { name: 'Tentar novamente' }))
+    await startDemoUntilProcessing(app)
 
-await screen.findByRole(
+    expect(await screen.findByText(message)).toBeInTheDocument()
 
-'heading',
+    expect(screen.queryByText(/detalhe interno/)).not.toBeInTheDocument()
 
-{ level: 2, name: /Grupo de opções compatíveis/ },
+    await app.user.click(screen.getByRole('button', { name: 'Voltar à revisão' }))
 
-{ timeout: 15_000 },
+    expect(await screen.findByRole('heading', { level: 2, name: 'Revisão' })).toBeInTheDocument()
+  })
 
-)
+  it('o modo demonstração nunca consulta a FIPE ao vivo', async () => {
+    const calls: CatalogSource[] = []
 
-})
+    const factory: ProviderFactory = (source) => {
+      calls.push(source)
 
+      return new MockVehicleDataProvider()
+    }
 
+    const app = await renderApp({ route: '/', providerFactory: factory })
 
-it.each([
+    await startDemoUntilProcessing(app)
 
-['network', /Não foi possível conectar à tabela FIPE/],
+    await screen.findByRole(
+      'heading',
 
-['timeout', /demorou mais que o esperado/],
+      { level: 2, name: /Grupo de opções compatíveis/ },
 
-['invalid_response', /formato inesperado/],
+      { timeout: 15_000 },
+    )
 
-] as const)('erro %s mostra mensagem específica e permite voltar', async (kind, message) => {
+    expect(calls).toEqual(['saved'])
+  })
 
-const { factory } = failingThenOk(new FipeError(kind, 'detalhe interno'))
+  it('consulta parcial: avisa que parte dos preços é referência salva e permite tentar de novo', async () => {
+    const full = await new MockVehicleDataProvider().loadCatalog()
 
-const app = await renderApp({ route: '/', providerFactory: factory })
+    const partial: VehicleCatalog = {
+      ...full,
 
-await startDemoUntilProcessing(app)
+      liveStatus: 'parcial',
 
+      onlineCount: 20,
 
+      snapshotCount: full.vehicles.length - 20,
 
-expect(await screen.findByText(message)).toBeInTheDocument()
+      retryable: true,
+    }
 
-expect(screen.queryByText(/detalhe interno/)).not.toBeInTheDocument()
+    const online: VehicleCatalog = {
+      ...full,
 
-await app.user.click(screen.getByRole('button', { name: 'Voltar à revisão' }))
+      liveStatus: 'online',
 
-expect(await screen.findByRole('heading', { level: 2, name: 'Revisão' })).toBeInTheDocument()
+      onlineCount: full.vehicles.length,
 
-})
+      snapshotCount: 0,
 
+      retryable: false,
+    }
 
+    let calls = 0
 
-it('o modo demonstração nunca consulta a FIPE ao vivo', async () => {
+    const factory: ProviderFactory = () => ({
+      id: 'live',
 
-const calls: CatalogSource[] = []
+      label: 'FIPE simulada',
 
-const factory: ProviderFactory = (source) => {
+      loadCatalog: async () => {
+        calls += 1
 
-calls.push(source)
+        return calls === 1 ? partial : online
+      },
+    })
 
-return new MockVehicleDataProvider()
+    const app = await renderApp({ route: '/', signedIn: true, providerFactory: factory })
 
-}
+    const { user } = app
 
-const app = await renderApp({ route: '/', providerFactory: factory })
+    await user.click(await screen.findByRole('link', { name: 'Nova simulação' }))
 
-await startDemoUntilProcessing(app)
+    await user.type(await screen.findByLabelText(/^Nome da simulação/), 'Teste parcial')
 
-await screen.findByRole(
+    await user.click(screen.getByRole('button', { name: 'Continuar' }))
 
-'heading',
+    await screen.findByRole('heading', { level: 2, name: 'Finanças' })
 
-{ level: 2, name: /Grupo de opções compatíveis/ },
+    await user.type(screen.getByLabelText(/^Renda líquida/), '12000')
 
-{ timeout: 15_000 },
+    await user.type(screen.getByLabelText(/^Despesas fixas/), '4000')
 
-)
+    await user.type(screen.getByLabelText(/^Gasto mensal máximo/), '3500')
 
-expect(calls).toEqual(['saved'])
+    await user.type(screen.getByLabelText(/^Valor disponível para entrada/), '30000')
 
-})
+    await user.type(screen.getByLabelText(/^Reserva acumulada/), '40000')
 
+    await user.selectOptions(
+      screen.getByRole('combobox', { name: /Em qual estado o veículo será registrado/ }),
 
+      'BA',
+    )
 
-it('consulta parcial: avisa que parte dos preços é referência salva e permite tentar de novo', async () => {
+    await user.click(screen.getByRole('button', { name: 'Continuar' }))
 
-const full = await new MockVehicleDataProvider().loadCatalog()
+    await screen.findByRole('heading', { level: 2, name: 'Uso' })
 
-const partial: VehicleCatalog = {
+    await user.type(screen.getByLabelText(/^Quilômetros por dia/), '30')
 
-...full,
+    for (let i = 0; i < 3; i += 1)
+      await user.click(screen.getByRole('button', { name: 'Continuar' }))
 
-liveStatus: 'parcial',
+    await screen.findByRole('heading', { level: 2, name: 'Revisão' })
 
-onlineCount: 20,
+    await user.click(screen.getByRole('button', { name: 'Calcular opções' }))
 
-snapshotCount: full.vehicles.length - 20,
+    expect(
+      await screen.findByText(
+        /Parte dos preços usa a referência FIPE salva/,
 
-retryable: true,
+        {},
 
-}
+        { timeout: 15_000 },
+      ),
+    ).toBeInTheDocument()
 
-const online: VehicleCatalog = {
+    expect(screen.getByText(/20 online/)).toBeInTheDocument()
 
-...full,
+    await user.click(screen.getByRole('button', { name: 'Tentar novamente' }))
 
-liveStatus: 'online',
-
-onlineCount: full.vehicles.length,
-
-snapshotCount: 0,
-
-retryable: false,
-
-}
-
-let calls = 0
-
-const factory: ProviderFactory = () => ({
-
-id: 'live',
-
-label: 'FIPE simulada',
-
-loadCatalog: async () => {
-
-calls += 1
-
-return calls === 1 ? partial : online
-
-},
-
-})
-
-
-
-const app = await renderApp({ route: '/', signedIn: true, providerFactory: factory })
-
-const { user } = app
-
-await user.click(await screen.findByRole('link', { name: 'Nova simulação' }))
-
-await user.type(await screen.findByLabelText(/^Nome da simulação/), 'Teste parcial')
-
-await user.click(screen.getByRole('button', { name: 'Continuar' }))
-
-await screen.findByRole('heading', { level: 2, name: 'Finanças' })
-
-await user.type(screen.getByLabelText(/^Renda líquida/), '12000')
-
-await user.type(screen.getByLabelText(/^Despesas fixas/), '4000')
-
-await user.type(screen.getByLabelText(/^Gasto mensal máximo/), '3500')
-
-await user.type(screen.getByLabelText(/^Valor disponível para entrada/), '30000')
-
-await user.type(screen.getByLabelText(/^Reserva acumulada/), '40000')
-
-await user.selectOptions(
-
-screen.getByRole('combobox', { name: /Em qual estado o veículo será registrado/ }),
-
-'BA',
-
-)
-
-await user.click(screen.getByRole('button', { name: 'Continuar' }))
-
-await screen.findByRole('heading', { level: 2, name: 'Uso' })
-
-await user.type(screen.getByLabelText(/^Quilômetros por dia/), '30')
-
-for (let i = 0; i < 3; i += 1)
-
-await user.click(screen.getByRole('button', { name: 'Continuar' }))
-
-await screen.findByRole('heading', { level: 2, name: 'Revisão' })
-
-await user.click(screen.getByRole('button', { name: 'Calcular opções' }))
-
-
-
-expect(
-
-await screen.findByText(
-
-/Parte dos preços usa a referência FIPE salva/,
-
-{},
-
-{ timeout: 15_000 },
-
-),
-
-).toBeInTheDocument()
-
-expect(screen.getByText(/20 online/)).toBeInTheDocument()
-
-
-
-await user.click(screen.getByRole('button', { name: 'Tentar novamente' }))
-
-await vi.waitFor(() =>
-
-expect(
-
-screen.queryByText(/Parte dos preços usa a referência FIPE salva/),
-
-).not.toBeInTheDocument(),
-
-)
-
-})
-
+    await vi.waitFor(() =>
+      expect(
+        screen.queryByText(/Parte dos preços usa a referência FIPE salva/),
+      ).not.toBeInTheDocument(),
+    )
+  })
 })

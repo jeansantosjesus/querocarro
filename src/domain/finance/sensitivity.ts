@@ -4,318 +4,230 @@ import type { AmortizationSystem, TcoInput, TcoResult } from '../../types/tco'
 
 import { calculateTco } from './tco'
 
-
-
 export type SensitivityDriver =
-
-| 'downPayment'
-
-| 'monthlyRatePct'
-
-| 'installments'
-
-| 'monthlyKm'
-
-| 'energyPrice'
-
-| 'maintenance'
-
-| 'insurance'
-
-| 'depreciation'
-
-
+  | 'downPayment'
+  | 'monthlyRatePct'
+  | 'installments'
+  | 'monthlyKm'
+  | 'energyPrice'
+  | 'maintenance'
+  | 'insurance'
+  | 'depreciation'
 
 export interface SensitivityCase {
+  /** `null` apenas para o caso base. */
 
-/** `null` apenas para o caso base. */
+  driver: SensitivityDriver | null
 
-driver: SensitivityDriver | null
+  label: string
 
-label: string
-
-result: TcoResult
-
+  result: TcoResult
 }
-
-
 
 /** Variações fixas, uma variável por vez. Os valores são premissas de teste de sensibilidade. */
 
 const VARIATIONS: ReadonlyArray<{
+  driver: SensitivityDriver
 
-driver: SensitivityDriver
+  label: string
 
-label: string
-
-apply: (input: TcoInput) => TcoInput
-
+  apply: (input: TcoInput) => TcoInput
 }> = [
+  {
+    driver: 'downPayment',
 
-{
+    label: 'Entrada −20%',
 
-driver: 'downPayment',
+    apply: (input) => ({ ...input, downPayment: input.downPayment * 0.8 }),
+  },
 
-label: 'Entrada −20%',
+  {
+    driver: 'downPayment',
 
-apply: (input) => ({ ...input, downPayment: input.downPayment * 0.8 }),
+    label: 'Entrada +20%',
 
-},
+    apply: (input) => ({ ...input, downPayment: input.downPayment * 1.2 }),
+  },
 
-{
+  {
+    driver: 'monthlyRatePct',
 
-driver: 'downPayment',
+    label: 'Taxa −1 p.p. ao mês',
 
-label: 'Entrada +20%',
+    apply: (input) => ({ ...input, monthlyRatePct: Math.max(input.monthlyRatePct - 1, 0) }),
+  },
 
-apply: (input) => ({ ...input, downPayment: input.downPayment * 1.2 }),
+  {
+    driver: 'monthlyRatePct',
 
-},
+    label: 'Taxa +1 p.p. ao mês',
 
-{
+    apply: (input) => ({ ...input, monthlyRatePct: input.monthlyRatePct + 1 }),
+  },
 
-driver: 'monthlyRatePct',
+  {
+    driver: 'installments',
 
-label: 'Taxa −1 p.p. ao mês',
+    label: 'Prazo −12 parcelas',
 
-apply: (input) => ({ ...input, monthlyRatePct: Math.max(input.monthlyRatePct - 1, 0) }),
+    apply: (input) => ({ ...input, installments: Math.max(input.installments - 12, 1) }),
+  },
 
-},
+  {
+    driver: 'installments',
 
-{
+    label: 'Prazo +12 parcelas',
 
-driver: 'monthlyRatePct',
+    apply: (input) => ({ ...input, installments: input.installments + 12 }),
+  },
 
-label: 'Taxa +1 p.p. ao mês',
+  {
+    driver: 'monthlyKm',
 
-apply: (input) => ({ ...input, monthlyRatePct: input.monthlyRatePct + 1 }),
+    label: 'Quilometragem −20%',
 
-},
+    apply: (input) => ({ ...input, monthlyKm: input.monthlyKm * 0.8 }),
+  },
 
-{
+  {
+    driver: 'monthlyKm',
 
-driver: 'installments',
+    label: 'Quilometragem +20%',
 
-label: 'Prazo −12 parcelas',
+    apply: (input) => ({ ...input, monthlyKm: input.monthlyKm * 1.2 }),
+  },
 
-apply: (input) => ({ ...input, installments: Math.max(input.installments - 12, 1) }),
+  {
+    driver: 'energyPrice',
 
-},
+    label: 'Combustível/energia −20%',
 
-{
+    apply: (input) => ({
+      ...input,
 
-driver: 'installments',
+      energyCostPerKm: input.energyCostPerKm === null ? null : input.energyCostPerKm * 0.8,
+    }),
+  },
 
-label: 'Prazo +12 parcelas',
+  {
+    driver: 'energyPrice',
 
-apply: (input) => ({ ...input, installments: input.installments + 12 }),
+    label: 'Combustível/energia +20%',
 
-},
+    apply: (input) => ({
+      ...input,
 
-{
+      energyCostPerKm: input.energyCostPerKm === null ? null : input.energyCostPerKm * 1.2,
+    }),
+  },
 
-driver: 'monthlyKm',
+  {
+    driver: 'maintenance',
 
-label: 'Quilometragem −20%',
+    label: 'Manutenção −20%',
 
-apply: (input) => ({ ...input, monthlyKm: input.monthlyKm * 0.8 }),
+    apply: (input) => ({
+      ...input,
 
-},
+      maintenanceAnnualAtStart:
+        input.maintenanceAnnualAtStart === null ? null : input.maintenanceAnnualAtStart * 0.8,
+    }),
+  },
 
-{
+  {
+    driver: 'maintenance',
 
-driver: 'monthlyKm',
+    label: 'Manutenção +20%',
 
-label: 'Quilometragem +20%',
+    apply: (input) => ({
+      ...input,
 
-apply: (input) => ({ ...input, monthlyKm: input.monthlyKm * 1.2 }),
+      maintenanceAnnualAtStart:
+        input.maintenanceAnnualAtStart === null ? null : input.maintenanceAnnualAtStart * 1.2,
+    }),
+  },
 
-},
+  {
+    driver: 'insurance',
 
-{
+    label: 'Seguro −20%',
 
-driver: 'energyPrice',
+    apply: (input) => ({
+      ...input,
 
-label: 'Combustível/energia −20%',
+      insuranceAnnual: input.insuranceAnnual === null ? null : input.insuranceAnnual * 0.8,
+    }),
+  },
 
-apply: (input) => ({
+  {
+    driver: 'insurance',
 
-...input,
+    label: 'Seguro +20%',
 
-energyCostPerKm: input.energyCostPerKm === null ? null : input.energyCostPerKm * 0.8,
+    apply: (input) => ({
+      ...input,
 
-}),
+      insuranceAnnual: input.insuranceAnnual === null ? null : input.insuranceAnnual * 1.2,
+    }),
+  },
 
-},
+  {
+    driver: 'depreciation',
 
-{
+    label: 'Depreciação −20%',
 
-driver: 'energyPrice',
+    apply: (input) => ({
+      ...input,
 
-label: 'Combustível/energia +20%',
+      depreciationAnnualPct:
+        input.depreciationAnnualPct === null ? null : input.depreciationAnnualPct * 0.8,
+    }),
+  },
 
-apply: (input) => ({
+  {
+    driver: 'depreciation',
 
-...input,
+    label: 'Depreciação +20%',
 
-energyCostPerKm: input.energyCostPerKm === null ? null : input.energyCostPerKm * 1.2,
+    apply: (input) => ({
+      ...input,
 
-}),
-
-},
-
-{
-
-driver: 'maintenance',
-
-label: 'Manutenção −20%',
-
-apply: (input) => ({
-
-...input,
-
-maintenanceAnnualAtStart:
-
-input.maintenanceAnnualAtStart === null ? null : input.maintenanceAnnualAtStart * 0.8,
-
-}),
-
-},
-
-{
-
-driver: 'maintenance',
-
-label: 'Manutenção +20%',
-
-apply: (input) => ({
-
-...input,
-
-maintenanceAnnualAtStart:
-
-input.maintenanceAnnualAtStart === null ? null : input.maintenanceAnnualAtStart * 1.2,
-
-}),
-
-},
-
-{
-
-driver: 'insurance',
-
-label: 'Seguro −20%',
-
-apply: (input) => ({
-
-...input,
-
-insuranceAnnual: input.insuranceAnnual === null ? null : input.insuranceAnnual * 0.8,
-
-}),
-
-},
-
-{
-
-driver: 'insurance',
-
-label: 'Seguro +20%',
-
-apply: (input) => ({
-
-...input,
-
-insuranceAnnual: input.insuranceAnnual === null ? null : input.insuranceAnnual * 1.2,
-
-}),
-
-},
-
-{
-
-driver: 'depreciation',
-
-label: 'Depreciação −20%',
-
-apply: (input) => ({
-
-...input,
-
-depreciationAnnualPct:
-
-input.depreciationAnnualPct === null ? null : input.depreciationAnnualPct * 0.8,
-
-}),
-
-},
-
-{
-
-driver: 'depreciation',
-
-label: 'Depreciação +20%',
-
-apply: (input) => ({
-
-...input,
-
-depreciationAnnualPct:
-
-input.depreciationAnnualPct === null
-
-? null
-
-: Math.min(input.depreciationAnnualPct * 1.2, 100),
-
-}),
-
-},
-
+      depreciationAnnualPct:
+        input.depreciationAnnualPct === null
+          ? null
+          : Math.min(input.depreciationAnnualPct * 1.2, 100),
+    }),
+  },
 ]
-
-
 
 /** Caso base seguido das variações, cada uma alterando um único driver. */
 
 export function runSensitivity(
+  base: TcoInput,
 
-base: TcoInput,
+  horizon: TcoHorizon,
 
-horizon: TcoHorizon,
-
-system: AmortizationSystem,
-
+  system: AmortizationSystem,
 ): SensitivityCase[] {
+  const cases: SensitivityCase[] = [
+    {
+      driver: null,
 
-const cases: SensitivityCase[] = [
+      label: 'Caso base',
 
-{
+      result: calculateTco(base, horizon, system),
+    },
+  ]
 
-driver: null,
+  for (const variation of VARIATIONS) {
+    cases.push({
+      driver: variation.driver,
 
-label: 'Caso base',
+      label: variation.label,
 
-result: calculateTco(base, horizon, system),
+      result: calculateTco(variation.apply(base), horizon, system),
+    })
+  }
 
-},
-
-]
-
-for (const variation of VARIATIONS) {
-
-cases.push({
-
-driver: variation.driver,
-
-label: variation.label,
-
-result: calculateTco(variation.apply(base), horizon, system),
-
-})
-
-}
-
-return cases
-
+  return cases
 }

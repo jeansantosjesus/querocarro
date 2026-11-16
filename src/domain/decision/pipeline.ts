@@ -368,4 +368,4 @@ function buildSuggestions(
     }
   }
   return suggestions
-        }
+}

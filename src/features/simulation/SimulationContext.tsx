@@ -18,8 +18,6 @@ import { useCatalog } from '../vehicles/CatalogContext'
 
 import { createBlankDraft, DEMO_INPUT, type SimulationDraftInput } from './defaults'
 
-
-
 /**
 
 * Estado da simulação ATUAL. Vive apenas em memória (React state): nenhum dado
@@ -31,337 +29,273 @@ import { createBlankDraft, DEMO_INPUT, type SimulationDraftInput } from './defau
 */
 
 export interface SimulationContextValue {
+  draft: SimulationDraftInput
 
-draft: SimulationDraftInput
+  input: SimulationInput | null
 
-input: SimulationInput | null
+  result: DecisionResult | null
 
-result: DecisionResult | null
+  hasCalculated: boolean
 
-hasCalculated: boolean
+  sortKey: SortKey
 
-sortKey: SortKey
+  groupSize: number
 
-groupSize: number
+  compareIds: string[]
 
-compareIds: string[]
+  savedId: string | null
 
-savedId: string | null
+  weightsCustomized: boolean
 
-weightsCustomized: boolean
+  setDraft: (draft: SimulationDraftInput) => void
 
-setDraft: (draft: SimulationDraftInput) => void
+  setWeightsCustomized: (value: boolean) => void
 
-setWeightsCustomized: (value: boolean) => void
+  /** Confirma uma entrada validada e a marca como pronta para cálculo. */
 
-/** Confirma uma entrada validada e a marca como pronta para cálculo. */
+  commitInput: (input: SimulationInput) => void
 
-commitInput: (input: SimulationInput) => void
+  /** Ajusta apenas os pesos (recalcula o resultado na hora). */
 
-/** Ajusta apenas os pesos (recalcula o resultado na hora). */
+  updateWeights: (weights: Weights) => void
 
-updateWeights: (weights: Weights) => void
+  /** Aplica uma sugestão de ajuste (um único parâmetro relaxado). */
 
-/** Aplica uma sugestão de ajuste (um único parâmetro relaxado). */
+  applySuggestion: (suggestionId: string) => boolean
 
-applySuggestion: (suggestionId: string) => boolean
+  startNew: (mode?: 'blank' | 'demo') => void
 
-startNew: (mode?: 'blank' | 'demo') => void
+  /** Carrega uma simulação salva (histórico) como ponto de partida. */
 
-/** Carrega uma simulação salva (histórico) como ponto de partida. */
+  loadInput: (input: SimulationInput, options?: { calculate?: boolean }) => void
 
-loadInput: (input: SimulationInput, options?: { calculate?: boolean }) => void
+  setSortKey: (key: SortKey) => void
 
-setSortKey: (key: SortKey) => void
+  setGroupSize: (size: number) => void
 
-setGroupSize: (size: number) => void
+  toggleCompare: (vehicleId: string) => void
 
-toggleCompare: (vehicleId: string) => void
+  clearCompare: () => void
 
-clearCompare: () => void
-
-markSaved: (id: string | null) => void
-
+  markSaved: (id: string | null) => void
 }
-
-
 
 const SimulationContext = createContext<SimulationContextValue | null>(null)
 
-
-
 function clampGroupSize(size: number): number {
+  return Math.min(
+    RECOMMENDATION_LIMITS.maxGroupSize,
 
-return Math.min(
-
-RECOMMENDATION_LIMITS.maxGroupSize,
-
-Math.max(RECOMMENDATION_LIMITS.minGroupSize, Math.round(size)),
-
-)
-
+    Math.max(RECOMMENDATION_LIMITS.minGroupSize, Math.round(size)),
+  )
 }
-
-
 
 export function SimulationProvider({ children }: { children: ReactNode }) {
+  const { catalog } = useCatalog()
 
-const { catalog } = useCatalog()
+  const [draft, setDraftState] = useState<SimulationDraftInput>(createBlankDraft)
 
-const [draft, setDraftState] = useState<SimulationDraftInput>(createBlankDraft)
+  const [input, setInput] = useState<SimulationInput | null>(null)
 
-const [input, setInput] = useState<SimulationInput | null>(null)
+  const [hasCalculated, setHasCalculated] = useState(false)
 
-const [hasCalculated, setHasCalculated] = useState(false)
+  const [sortKey, setSortKey] = useState<SortKey>('alfabetica')
 
-const [sortKey, setSortKey] = useState<SortKey>('alfabetica')
+  const [groupSize, setGroupSizeState] = useState<number>(RECOMMENDATION_LIMITS.defaultGroupSize)
 
-const [groupSize, setGroupSizeState] = useState<number>(RECOMMENDATION_LIMITS.defaultGroupSize)
+  const [compareIds, setCompareIds] = useState<string[]>([])
 
-const [compareIds, setCompareIds] = useState<string[]>([])
+  const [savedId, setSavedId] = useState<string | null>(null)
 
-const [savedId, setSavedId] = useState<string | null>(null)
+  const [weightsCustomized, setWeightsCustomized] = useState(false)
 
-const [weightsCustomized, setWeightsCustomized] = useState(false)
+  const result = useMemo<DecisionResult | null>(() => {
+    if (!input || !hasCalculated || !catalog) return null
 
+    const referenceYear = referenceYearOf(catalog.referenceMonth)
 
+    return runDecision(input, catalog.vehicles, { referenceYear, groupSize, withSuggestions: true })
+  }, [input, hasCalculated, catalog, groupSize])
 
-const result = useMemo<DecisionResult | null>(() => {
+  const commitInput = useCallback((next: SimulationInput) => {
+    setInput(next)
 
-if (!input || !hasCalculated || !catalog) return null
+    setDraftState(next as SimulationDraftInput)
 
-const referenceYear = referenceYearOf(catalog.referenceMonth)
+    setHasCalculated(true)
 
-return runDecision(input, catalog.vehicles, { referenceYear, groupSize, withSuggestions: true })
+    setCompareIds([])
 
-}, [input, hasCalculated, catalog, groupSize])
+    setSavedId(null)
+  }, [])
 
+  const updateWeights = useCallback((weights: Weights) => {
+    setInput((current) => (current ? { ...current, weights } : current))
 
+    setDraftState((current) => ({ ...current, weights }))
 
-const commitInput = useCallback((next: SimulationInput) => {
+    setWeightsCustomized(true)
 
-setInput(next)
+    setSavedId(null)
+  }, [])
 
-setDraftState(next as SimulationDraftInput)
+  const applySuggestion = useCallback(
+    (suggestionId: string) => {
+      if (!input) return false
 
-setHasCalculated(true)
+      const variant = buildRelaxedVariants(input).find((item) => item.id === suggestionId)
 
-setCompareIds([])
+      if (!variant) return false
 
-setSavedId(null)
+      setInput(variant.input)
 
-}, [])
+      setDraftState(variant.input as SimulationDraftInput)
 
+      setSavedId(null)
 
+      return true
+    },
 
-const updateWeights = useCallback((weights: Weights) => {
+    [input],
+  )
 
-setInput((current) => (current ? { ...current, weights } : current))
+  const startNew = useCallback((mode: 'blank' | 'demo' = 'blank') => {
+    const next = mode === 'demo' ? DEMO_INPUT : null
 
-setDraftState((current) => ({ ...current, weights }))
+    setDraftState(next ? (structuredClone(next) as SimulationDraftInput) : createBlankDraft())
 
-setWeightsCustomized(true)
+    setInput(null)
 
-setSavedId(null)
+    setHasCalculated(false)
 
-}, [])
+    setCompareIds([])
 
+    setSavedId(null)
 
+    setWeightsCustomized(mode === 'demo')
 
-const applySuggestion = useCallback(
+    setSortKey('alfabetica')
+  }, [])
 
-(suggestionId: string) => {
+  const loadInput = useCallback((next: SimulationInput, options?: { calculate?: boolean }) => {
+    setDraftState(structuredClone(next) as SimulationDraftInput)
 
-if (!input) return false
+    setInput(options?.calculate ? next : null)
 
-const variant = buildRelaxedVariants(input).find((item) => item.id === suggestionId)
+    setHasCalculated(Boolean(options?.calculate))
 
-if (!variant) return false
+    setCompareIds([])
 
-setInput(variant.input)
+    setSavedId(null)
 
-setDraftState(variant.input as SimulationDraftInput)
+    setWeightsCustomized(true)
+  }, [])
 
-setSavedId(null)
+  const setGroupSize = useCallback((size: number) => setGroupSizeState(clampGroupSize(size)), [])
 
-return true
+  const toggleCompare = useCallback((vehicleId: string) => {
+    setCompareIds((current) => {
+      if (current.includes(vehicleId)) return current.filter((id) => id !== vehicleId)
 
-},
+      if (current.length >= RECOMMENDATION_LIMITS.maxCompare) return current
 
-[input],
+      return [...current, vehicleId]
+    })
+  }, [])
 
-)
+  const clearCompare = useCallback(() => setCompareIds([]), [])
 
+  const value = useMemo<SimulationContextValue>(
+    () => ({
+      draft,
 
+      input,
 
-const startNew = useCallback((mode: 'blank' | 'demo' = 'blank') => {
+      result,
 
-const next = mode === 'demo' ? DEMO_INPUT : null
+      hasCalculated,
 
-setDraftState(next ? (structuredClone(next) as SimulationDraftInput) : createBlankDraft())
+      sortKey,
 
-setInput(null)
+      groupSize,
 
-setHasCalculated(false)
+      compareIds,
 
-setCompareIds([])
+      savedId,
 
-setSavedId(null)
+      weightsCustomized,
 
-setWeightsCustomized(mode === 'demo')
+      setDraft: setDraftState,
 
-setSortKey('alfabetica')
+      setWeightsCustomized,
 
-}, [])
+      commitInput,
 
+      updateWeights,
 
+      applySuggestion,
 
-const loadInput = useCallback((next: SimulationInput, options?: { calculate?: boolean }) => {
+      startNew,
 
-setDraftState(structuredClone(next) as SimulationDraftInput)
+      loadInput,
 
-setInput(options?.calculate ? next : null)
+      setSortKey,
 
-setHasCalculated(Boolean(options?.calculate))
+      setGroupSize,
 
-setCompareIds([])
+      toggleCompare,
 
-setSavedId(null)
+      clearCompare,
 
-setWeightsCustomized(true)
+      markSaved: setSavedId,
+    }),
 
-}, [])
+    [
+      draft,
 
+      input,
 
+      result,
 
-const setGroupSize = useCallback((size: number) => setGroupSizeState(clampGroupSize(size)), [])
+      hasCalculated,
 
+      sortKey,
 
+      groupSize,
 
-const toggleCompare = useCallback((vehicleId: string) => {
+      compareIds,
 
-setCompareIds((current) => {
+      savedId,
 
-if (current.includes(vehicleId)) return current.filter((id) => id !== vehicleId)
+      weightsCustomized,
 
-if (current.length >= RECOMMENDATION_LIMITS.maxCompare) return current
+      commitInput,
 
-return [...current, vehicleId]
+      updateWeights,
 
-})
+      applySuggestion,
 
-}, [])
+      startNew,
 
+      loadInput,
 
+      setGroupSize,
 
-const clearCompare = useCallback(() => setCompareIds([]), [])
+      toggleCompare,
 
+      clearCompare,
+    ],
+  )
 
-
-const value = useMemo<SimulationContextValue>(
-
-() => ({
-
-draft,
-
-input,
-
-result,
-
-hasCalculated,
-
-sortKey,
-
-groupSize,
-
-compareIds,
-
-savedId,
-
-weightsCustomized,
-
-setDraft: setDraftState,
-
-setWeightsCustomized,
-
-commitInput,
-
-updateWeights,
-
-applySuggestion,
-
-startNew,
-
-loadInput,
-
-setSortKey,
-
-setGroupSize,
-
-toggleCompare,
-
-clearCompare,
-
-markSaved: setSavedId,
-
-}),
-
-[
-
-draft,
-
-input,
-
-result,
-
-hasCalculated,
-
-sortKey,
-
-groupSize,
-
-compareIds,
-
-savedId,
-
-weightsCustomized,
-
-commitInput,
-
-updateWeights,
-
-applySuggestion,
-
-startNew,
-
-loadInput,
-
-setGroupSize,
-
-toggleCompare,
-
-clearCompare,
-
-],
-
-)
-
-
-
-return <SimulationContext.Provider value={value}>{children}</SimulationContext.Provider>
-
+  return <SimulationContext.Provider value={value}>{children}</SimulationContext.Provider>
 }
-
-
 
 // eslint-disable-next-line react-refresh/only-export-components
 
 export function useSimulation(): SimulationContextValue {
+  const context = useContext(SimulationContext)
 
-const context = useContext(SimulationContext)
+  if (!context) throw new Error('useSimulation deve ser usado dentro de <SimulationProvider>.')
 
-if (!context) throw new Error('useSimulation deve ser usado dentro de <SimulationProvider>.')
-
-return context
-
+  return context
 }

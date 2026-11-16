@@ -2,11 +2,7 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
 import { envResult } from '../../config/env'
 
-
-
 const REMEMBER_KEY = 'qc:auth:remember'
-
-
 
 /**
 
@@ -19,104 +15,60 @@ const REMEMBER_KEY = 'qc:auth:remember'
 */
 
 function readRemember(): boolean {
-
-try {
-
-return window.localStorage.getItem(REMEMBER_KEY) !== '0'
-
-} catch {
-
-return true
-
+  try {
+    return window.localStorage.getItem(REMEMBER_KEY) !== '0'
+  } catch {
+    return true
+  }
 }
-
-}
-
-
 
 export function setRememberSession(remember: boolean): void {
-
-try {
-
-window.localStorage.setItem(REMEMBER_KEY, remember ? '1' : '0')
-
-} catch {
-
-// storage indisponível: usa o padrão
-
+  try {
+    window.localStorage.setItem(REMEMBER_KEY, remember ? '1' : '0')
+  } catch {
+    // storage indisponível: usa o padrão
+  }
 }
-
-}
-
-
 
 function activeStorage(): Storage {
-
-return readRemember() ? window.localStorage : window.sessionStorage
-
+  return readRemember() ? window.localStorage : window.sessionStorage
 }
-
-
 
 const authStorage = {
+  getItem: (key: string) => {
+    try {
+      return window.localStorage.getItem(key) ?? window.sessionStorage.getItem(key)
+    } catch {
+      return null
+    }
+  },
 
-getItem: (key: string) => {
+  setItem: (key: string, value: string) => {
+    try {
+      const target = activeStorage()
 
-try {
+      const other = target === window.localStorage ? window.sessionStorage : window.localStorage
 
-return window.localStorage.getItem(key) ?? window.sessionStorage.getItem(key)
+      other.removeItem(key)
 
-} catch {
+      target.setItem(key, value)
+    } catch {
+      // ignora falhas de storage
+    }
+  },
 
-return null
+  removeItem: (key: string) => {
+    try {
+      window.localStorage.removeItem(key)
 
+      window.sessionStorage.removeItem(key)
+    } catch {
+      // ignora falhas de storage
+    }
+  },
 }
-
-},
-
-setItem: (key: string, value: string) => {
-
-try {
-
-const target = activeStorage()
-
-const other = target === window.localStorage ? window.sessionStorage : window.localStorage
-
-other.removeItem(key)
-
-target.setItem(key, value)
-
-} catch {
-
-// ignora falhas de storage
-
-}
-
-},
-
-removeItem: (key: string) => {
-
-try {
-
-window.localStorage.removeItem(key)
-
-window.sessionStorage.removeItem(key)
-
-} catch {
-
-// ignora falhas de storage
-
-}
-
-},
-
-}
-
-
 
 let cached: SupabaseClient | null | undefined
-
-
 
 /**
 
@@ -133,35 +85,27 @@ let cached: SupabaseClient | null | undefined
 */
 
 export function getSupabaseClient(): SupabaseClient | null {
+  if (cached !== undefined) return cached
 
-if (cached !== undefined) return cached
+  if (!envResult.ok) {
+    cached = null
 
-if (!envResult.ok) {
+    return cached
+  }
 
-cached = null
+  cached = createClient(envResult.env.supabaseUrl, envResult.env.supabaseAnonKey, {
+    auth: {
+      flowType: 'pkce',
 
-return cached
+      persistSession: true,
 
-}
+      autoRefreshToken: true,
 
-cached = createClient(envResult.env.supabaseUrl, envResult.env.supabaseAnonKey, {
+      detectSessionInUrl: false,
 
-auth: {
+      storage: authStorage,
+    },
+  })
 
-flowType: 'pkce',
-
-persistSession: true,
-
-autoRefreshToken: true,
-
-detectSessionInUrl: false,
-
-storage: authStorage,
-
-},
-
-})
-
-return cached
-
+  return cached
 }

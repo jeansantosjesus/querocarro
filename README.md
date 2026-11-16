@@ -1,18 +1,10 @@
 # Quero Carro (QC)
 
-
-
 Sistema de Apoio à Decisão (SAD) **acadêmico** que ajuda a pessoa a encontrar um **grupo de 3 a 5 veículos** compatíveis com a sua situação financeira e o seu perfil de uso. Os dados de mercado vêm da [API FIPE (Parallelum v2)](https://fipe.parallelum.com.br/api/v2); o cálculo é **determinístico** (Weighted Sum Model), **sem IA generativa**, e cada resultado é explicável.
-
-
 
 > **Aviso.** Os resultados são estimativas educacionais. Não constituem aconselhamento financeiro. A FIPE é apenas uma referência de mercado; seguro, manutenção, impostos, combustível e financiamento variam. A decisão e a responsabilidade pela compra são do usuário.
 
-
-
 ## Princípios
-
-
 
 - **Grupo, não vencedor.** O resultado mostra de 3 a 5 opções com o mesmo peso visual, em ordem alfabética inicial, reordenáveis por vários critérios.
 
@@ -24,23 +16,13 @@ Sistema de Apoio à Decisão (SAD) **acadêmico** que ajuda a pessoa a encontrar
 
 - **Privacidade por padrão.** Simulação só em memória; salvar exige consentimento; histórico pode ser apagado; há modo demonstração com dados fictícios.
 
-
-
 ## Stack
-
-
 
 React 19 · TypeScript (strict) · Vite 8 · React Router 7 (`HashRouter`) · Tailwind CSS 4 · Supabase (Auth + Postgres + RLS) · React Hook Form + Zod · Recharts · Vitest + Testing Library + vitest-axe · ESLint + Prettier · GitHub Actions/Pages.
 
-
-
 ## Começando
 
-
-
 Requisitos: Node 22+ e npm.
-
-
 
 ```bash
 
@@ -52,15 +34,9 @@ npm run dev # http://localhost:5173
 
 ```
 
-
-
 Sem as variáveis do Supabase o app abre, mas só o **modo demonstração** fica disponível (cadastro/login ficam indisponíveis com aviso claro).
 
-
-
 ### Scripts
-
-
 
 | Comando | O que faz |
 
@@ -80,11 +56,7 @@ Sem as variáveis do Supabase o app abre, mas só o **modo demonstração** fica
 
 | `npm run format` / `format:check` | Prettier |
 
-
-
 ## Configurar o Supabase
-
-
 
 1. Crie uma conta e um projeto em [supabase.com](https://supabase.com) (região **South America (São Paulo)**). Guarde a senha do banco em um gerenciador de senhas. **Ela nunca entra no projeto.**
 
@@ -100,15 +72,15 @@ Sem as variáveis do Supabase o app abre, mas só o **modo demonstração** fica
 
 4. No **SQL Editor**, rode **na ordem**:
 
-1. `supabase/migrations/0001_schema.sql`
+5. `supabase/migrations/0001_schema.sql`
 
-2. `supabase/migrations/0002_rls.sql`
+6. `supabase/migrations/0002_rls.sql`
 
-3. `supabase/migrations/0003_functions.sql`
+7. `supabase/migrations/0003_functions.sql`
 
-5. Valide o RLS rodando `supabase/tests/rls_verification.sql` (veja [docs/security.md](docs/security.md)).
+8. Valide o RLS rodando `supabase/tests/rls_verification.sql` (veja [docs/security.md](docs/security.md)).
 
-6. Em **Authentication → URL Configuration**:
+9. Em **Authentication → URL Configuration**:
 
 - **Site URL:** `https://jeansantosjesus.github.io/querocarro/`
 
@@ -116,11 +88,7 @@ Sem as variáveis do Supabase o app abre, mas só o **modo demonstração** fica
 
 7. Em **Authentication → Providers → Email**, decida sobre **Confirm email**. Com a confirmação ligada, o app orienta a pessoa a confirmar o e-mail antes de entrar; desligada, ela entra direto. Os dois fluxos são tratados.
 
-
-
 ## Publicar no GitHub Pages
-
-
 
 1. No repositório: **Settings → Pages → Build and deployment → Source: GitHub Actions**.
 
@@ -130,11 +98,7 @@ Sem as variáveis do Supabase o app abre, mas só o **modo demonstração** fica
 
 4. O app fica em `https://jeansantosjesus.github.io/querocarro/`.
 
-
-
 Observações:
-
-
 
 - O app usa `HashRouter` (URLs como `/#/painel`), então recarregar a página não gera 404 no Pages.
 
@@ -144,11 +108,7 @@ Observações:
 
 - A chave anon do Supabase é pública por projeto. **A segurança dos dados está no RLS**, não no sigilo dessa chave.
 
-
-
 ## Estrutura
-
-
 
 ```
 
@@ -184,11 +144,7 @@ docs/ arquitetura, dados, metodologia, segurança, ADRs, backlog, testes, qualid
 
 ```
 
-
-
 ## Documentação
-
-
 
 - [Arquitetura (Mermaid)](docs/architecture.md)
 
@@ -206,10 +162,6 @@ docs/ arquitetura, dados, metodologia, segurança, ADRs, backlog, testes, qualid
 
 - [Backlog e limitações](docs/backlog.md)
 
-
-
 ## Licença e uso
-
-
 
 Projeto acadêmico. Sem garantias. Não use como única base para uma decisão financeira.

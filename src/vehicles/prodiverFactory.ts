@@ -6,12 +6,7 @@ import { MockVehicleDataProvider } from '../../services/vehicles/MockVehicleData
 
 import type { ProviderFactory } from './CatalogContext'
 
-
-
 export const defaultProviderFactory: ProviderFactory = (source) =>
-
-source === 'live'
-
-? new FipeVehicleDataProvider(createFipeClient())
-
-: new MockVehicleDataProvider()
+  source === 'live'
+    ? new FipeVehicleDataProvider(createFipeClient())
+    : new MockVehicleDataProvider()

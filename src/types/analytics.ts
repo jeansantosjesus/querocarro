@@ -1,132 +1,95 @@
 import type { DistributionBand, StatSummary } from '../utils/stats'
 
-
-
 export type AdherenceLevel = 'muito_alta' | 'alta' | 'moderada' | 'baixa' | 'incompativel'
 
 export type PressureLevel = 'baixa' | 'moderada' | 'elevada' | 'critica'
 
-
-
 export type TcoComponentId =
-
-'installment' | 'ipva' | 'licensing' | 'insurance' | 'maintenance' | 'energy' | 'depreciation'
-
-
+  'installment' | 'ipva' | 'licensing' | 'insurance' | 'maintenance' | 'energy' | 'depreciation'
 
 export interface TcoComponentShare {
+  id: TcoComponentId
 
-id: TcoComponentId
+  label: string
 
-label: string
+  monthly: number
 
-monthly: number
+  /** Fração do custo mensal total (0-1). */
 
-/** Fração do custo mensal total (0-1). */
-
-share: number
-
+  share: number
 }
-
-
 
 export interface TcoComposition {
+  monthlyTotal: number
 
-monthlyTotal: number
-
-components: TcoComponentShare[]
-
+  components: TcoComponentShare[]
 }
-
-
 
 export type ClusteringMethod = 'kmeans' | 'faixas_tco' | 'indisponivel'
 
-
-
 export interface AnalyticGroup {
+  /** Letra (A, B, ...): identifica o grupo, não indica qualidade. */
 
-/** Letra (A, B, ...): identifica o grupo, não indica qualidade. */
+  id: string
 
-id: string
+  label: string
 
-label: string
+  size: number
 
-size: number
-
-description: string
-
+  description: string
 }
-
-
 
 export interface ClusteringSummary {
+  method: ClusteringMethod
 
-method: ClusteringMethod
+  k: number | null
 
-k: number | null
+  silhouette: number | null
 
-silhouette: number | null
+  /** Motivo da escolha do método (ex.: amostra insuficiente). */
 
-/** Motivo da escolha do método (ex.: amostra insuficiente). */
+  reason: string
 
-reason: string
+  groups: AnalyticGroup[]
 
-groups: AnalyticGroup[]
+  /** Veículos sem grupo por dado indisponível. */
 
-/** Veículos sem grupo por dado indisponível. */
-
-unassignedCount: number
-
+  unassignedCount: number
 }
-
-
 
 export interface VehicleAnalytics {
+  /** Id do grupo analítico; null se o veículo não pôde ser agrupado. */
 
-/** Id do grupo analítico; null se o veículo não pôde ser agrupado. */
+  groupId: string | null
 
-groupId: string | null
+  adherence: AdherenceLevel | null
 
-adherence: AdherenceLevel | null
-
-tcoComposition: TcoComposition | null
-
+  tcoComposition: TcoComposition | null
 }
-
-
 
 export interface DecisionSummary {
+  evaluatedCount: number
 
-evaluatedCount: number
+  eligibleCount: number
 
-eligibleCount: number
+  excludedCount: number
 
-excludedCount: number
+  excludedByStage: Record<'qualidade' | 'dados' | 'filtro' | 'viabilidade', number>
 
-excludedByStage: Record<'qualidade' | 'dados' | 'filtro' | 'viabilidade', number>
+  price: StatSummary
 
-price: StatSummary
+  monthlyTotal: StatSummary
 
-monthlyTotal: StatSummary
+  /** Distribuição do custo mensal nas faixas definidas pelos quartis do próprio conjunto. */
 
-/** Distribuição do custo mensal nas faixas definidas pelos quartis do próprio conjunto. */
-
-monthlyTotalBands: DistributionBand[]
-
+  monthlyTotalBands: DistributionBand[]
 }
-
-
 
 export interface DecisionAnalytics {
+  summary: DecisionSummary
 
-summary: DecisionSummary
-
-clustering: ClusteringSummary
-
+  clustering: ClusteringSummary
 }
-
-
 
 /**
 
@@ -137,22 +100,18 @@ clustering: ClusteringSummary
 */
 
 export interface ContinuousEstimator<Features> {
+  readonly id: string
 
-readonly id: string
+  readonly target: string
 
-readonly target: string
+  readonly trainingDataSource: string
 
-readonly trainingDataSource: string
+  readonly metrics: { mae: number; rmse: number; r2: number } | null
 
-readonly metrics: { mae: number; rmse: number; r2: number } | null
+  /** Retorna null quando não houver dado suficiente para estimar. */
 
-/** Retorna null quando não houver dado suficiente para estimar. */
-
-estimate(features: Features): { value: number; lower: number; upper: number } | null
-
+  estimate(features: Features): { value: number; lower: number; upper: number } | null
 }
-
-
 
 /**
 
@@ -163,15 +122,13 @@ estimate(features: Features): { value: number; lower: number; upper: number } | 
 */
 
 export interface AssociationEvent {
+  consented: true
 
-consented: true
+  /** Itens do evento (ex.: categoria escolhida, combustível); sem valores monetários exatos. */
 
-/** Itens do evento (ex.: categoria escolhida, combustível); sem valores monetários exatos. */
+  items: readonly string[]
 
-items: readonly string[]
+  /** Faixa de renda agregada, nunca o valor informado. */
 
-/** Faixa de renda agregada, nunca o valor informado. */
-
-incomeBand: string | null
-
+  incomeBand: string | null
 }

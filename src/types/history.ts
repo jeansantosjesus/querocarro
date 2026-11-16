@@ -4,8 +4,6 @@ import type { SimulationInput } from '../schemas/simulation'
 
 import type { RankedVehicle, ScenarioId, Weights } from './decision'
 
-
-
 /**
 
 * Premissas usadas no cálculo, gravadas com a simulação. Os ajustes da pessoa já estão em
@@ -15,127 +13,97 @@ import type { RankedVehicle, ScenarioId, Weights } from './decision'
 */
 
 export interface SavedPremises {
+  assumptionsReferenceMonth: string
 
-assumptionsReferenceMonth: string
+  referenceYear: number
 
-referenceYear: number
-
-assumptions: Assumptions
-
+  assumptions: Assumptions
 }
-
-
 
 export interface SavedResultItem {
+  vehicleFipeCode: string
 
-vehicleFipeCode: string
+  vehicleYearId: string
 
-vehicleYearId: string
+  compatibilityIndex: number
 
-compatibilityIndex: number
+  inRecommendedGroup: boolean
 
-inRecommendedGroup: boolean
+  rank: number
 
-rank: number
+  /** Resultado completo (RankedVehicle) como o usuário viu. */
 
-/** Resultado completo (RankedVehicle) como o usuário viu. */
-
-payload: RankedVehicle
-
+  payload: RankedVehicle
 }
-
-
 
 export interface ScenarioSnapshot {
+  scenarioId: ScenarioId
 
-scenarioId: ScenarioId
+  modelVersion: string
 
-modelVersion: string
+  multipliers: { insurance: number; maintenance: number; energy: number }
 
-multipliers: { insurance: number; maintenance: number; energy: number }
+  monthlyLimitShare: number
 
-monthlyLimitShare: number
+  maxIncomeCommitment: number
 
-maxIncomeCommitment: number
+  /** Ausente em simulações salvas antes do registro de premissas. */
 
-/** Ausente em simulações salvas antes do registro de premissas. */
-
-premises?: SavedPremises
-
+  premises?: SavedPremises
 }
-
-
 
 export interface SimulationDraft {
+  title: string
 
-title: string
+  scenarioId: ScenarioId
 
-scenarioId: ScenarioId
+  inputs: SimulationInput
 
-inputs: SimulationInput
+  weights: Weights
 
-weights: Weights
+  scenarioSnapshot: ScenarioSnapshot
 
-scenarioSnapshot: ScenarioSnapshot
+  fipeReferenceMonth: string | null
 
-fipeReferenceMonth: string | null
+  fipeReferenceMonthLabel: string | null
 
-fipeReferenceMonthLabel: string | null
+  catalogVersion: string
 
-catalogVersion: string
-
-results: SavedResultItem[]
-
+  results: SavedResultItem[]
 }
-
-
 
 export interface SavedSimulation extends SimulationDraft {
+  id: string
 
-id: string
-
-createdAt: string
-
+  createdAt: string
 }
-
-
 
 export interface SavedSimulationSummary {
+  id: string
 
-id: string
+  title: string
 
-title: string
+  scenarioId: ScenarioId
 
-scenarioId: ScenarioId
+  createdAt: string
 
-createdAt: string
+  fipeReferenceMonth: string | null
 
-fipeReferenceMonth: string | null
+  fipeReferenceMonthLabel: string | null
 
-fipeReferenceMonthLabel: string | null
-
-resultCount: number
-
+  resultCount: number
 }
-
-
 
 export interface UserProfile {
+  id: string
 
-id: string
+  displayName: string
 
-displayName: string
-
-privacyAcceptedAt: string | null
-
+  privacyAcceptedAt: string | null
 }
 
-
-
 export interface UserPreferences {
+  persistHistoryConsent: boolean
 
-persistHistoryConsent: boolean
-
-defaultScenario: ScenarioId | null
-
+  defaultScenario: ScenarioId | null
 }

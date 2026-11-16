@@ -23,47 +23,40 @@
 */
 
 export type DataOrigin =
-
-'fipe' | 'government' | 'academic' | 'user' | 'estimated' | 'demonstration' | 'unavailable'
-
-
+  'fipe' | 'government' | 'academic' | 'user' | 'estimated' | 'demonstration' | 'unavailable'
 
 /** Confiança declarada pelo QC. "nao_verificada" quando o QC não tem como checar. */
 
 export type ProvenanceConfidence = 'alta' | 'media' | 'baixa' | 'nao_verificada'
 
-
-
 /** Proveniência de um valor ou grupo de valores. Campos sem informação ficam `null`. */
 
 export interface DataProvenance {
+  origin: DataOrigin
 
-origin: DataOrigin
+  /** Nome da fonte, ou `null` quando não há fonte cadastrada. */
 
-/** Nome da fonte, ou `null` quando não há fonte cadastrada. */
+  sourceName: string | null
 
-sourceName: string | null
+  /** URL da fonte, ou `null`. */
 
-/** URL da fonte, ou `null`. */
+  sourceUrl: string | null
 
-sourceUrl: string | null
+  /** Data ou exercício de referência (YYYY-MM, YYYY-MM-DD ou ano), ou `null`. */
 
-/** Data ou exercício de referência (YYYY-MM, YYYY-MM-DD ou ano), ou `null`. */
+  referenceDate: string | null
 
-referenceDate: string | null
+  /** Quando o QC obteve ou atualizou o dado, ou `null`. */
 
-/** Quando o QC obteve ou atualizou o dado, ou `null`. */
+  collectedAt: string | null
 
-collectedAt: string | null
+  /** Método resumido: como o valor é usado ou obtido. */
 
-/** Método resumido: como o valor é usado ou obtido. */
+  methodology: string
 
-methodology: string
+  confidence: ProvenanceConfidence
 
-confidence: ProvenanceConfidence
+  /** Observações sobre limites da fonte. */
 
-/** Observações sobre limites da fonte. */
-
-notes: readonly string[]
-
+  notes: readonly string[]
 }
