@@ -1,0 +1,61 @@
+# dependências e build
+
+node_modules/
+
+dist/
+
+coverage/
+
+*.tsbuildinfo
+
+
+
+# variáveis de ambiente (NUNCA versionar)
+
+.env
+
+.env.*
+
+!.env.example
+
+
+
+# logs e temporários
+
+*.log
+
+npm-debug.log*
+
+.DS_Store
+
+Thumbs.db
+
+
+
+# editor
+
+.vscode/*
+
+!.vscode/extensions.json
+
+.idea/
+
+
+
+# Supabase local
+
+supabase/.branches/
+
+supabase/.temp/
+
+
+
+# artefatos temporarios de ferramentas
+
+tmp-*/
+
+
+
+# backup local de git (o histórico já está em .git)
+
+*.bundle
